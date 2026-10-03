@@ -36,7 +36,7 @@ def chat(request: ChatRequest):
     }
     
     payload = {
-        "model": "qwen/qwen-2.5-coder-32b-instruct:free",
+        "model": "openrouter/free",
         "messages": [
             {
                 "role": "system", 
