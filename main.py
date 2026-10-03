@@ -56,7 +56,11 @@ def ask_openrouter(user_message: str, system_prompt: str) -> str:
 
 
 def send_fonnte_message(target: str, text_message: str):
-    fonnte_token = os.getenv("FONNTE_TOKEN")
+    fonnte_token = (
+        os.getenv("FONNTE_TOKEN")
+        or os.getenv("FONNTE_API_TOKEN")
+        or os.getenv("TOKEN_FONNTE")
+    )
     if not fonnte_token:
         print("[ERROR] FONNTE_TOKEN tidak ditemukan di Environment Variables!")
         return
@@ -125,12 +129,9 @@ async def whatsapp_webhook(request: Request):
     if not message:
         return {"status": "ignored", "reason": "Pesan kosong"}
 
-    # Tujuan balasan: Ke ID grup jika ada, jika tidak ke pengirim/grup default
     reply_target = (
         group_id if group_id else (sender if sender else TARGET_GROUP_ID)
     )
-
-    # Lolos validasi jika ID grup sesuai ATAU jika ID grup kosong
     is_group_valid = not group_id or (
         TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID
     )
@@ -138,23 +139,30 @@ async def whatsapp_webhook(request: Request):
     if is_group_valid:
         msg_lower = message.lower()
 
+        # Pemicu !rekap
         if msg_lower.startswith("!rekap"):
             system_prompt = (
-                "Kamu adalah AI Agent - Sup, admin rekapitulasi di grup"
-                " WhatsApp. Tugasmu adalah menganalisis teks daftar"
-                " pesanan/data dari anggota grup, lalu menyusun rekapannya"
-                " dengan rapi dan ringkas. Gunakan bahasa Indonesia yang santai"
-                " dan profesional."
+                "Kamu adalah sistem rekapitulasi data otomatis berbasis AI Agent. Tugasmu adalah menyusun laporan rekapitulasi data secara formal, lugas, dan rapi berdasarkan teks pesan yang diterima.\n\n"
+                "Aturan Format Balasan:\n"
+                "1. DILARANG menggunakan salam atau kata pembuka informal (seperti 'Halo', 'Bentar lagi ya', 'Ini dia').\n"
+                "2. Awali langsung dengan judul formal dalam cetak tebal (contoh: *LAPORAN REKAPITULASI DATA PESANAN*).\n"
+                "3. Kelompokkan setiap item berdasarkan KATEGORI secara rapi menggunakan simbol poin (•).\n"
+                "4. Sertakan subtotal per kategori dan hitung TOTAL KESELURUHAN di akhir laporan.\n"
+                "5. Pada baris paling akhir pesan, wajib tambahkan keterangan model AI yang digunakan dalam format berikut:\n"
+                "   _\n"
+                "   _Diproses oleh: AI Agent - Sup (Model: OpenRouter / Free LLM Engine)_"
             )
             ai_reply = ask_openrouter(message, system_prompt)
             send_fonnte_message(reply_target, ai_reply)
             return {"status": "processed", "type": "rekap"}
 
+        # Pemicu !sup, !bot, !tanya
         elif any(msg_lower.startswith(trig) for trig in TRIGGERS):
             system_prompt = (
-                "Kamu adalah AI Agent - Sup, asisten cerdas di grup WhatsApp."
-                " Bantu jawab pertanyaan anggota grup secara singkat, ramah,"
-                " dan jelas."
+                "Kamu adalah AI Agent - Sup, asisten cerdas berbasis Large Language Model (LLM). "
+                "Jawab pertanyaan anggota grup secara jelas, sopan, dan formal. "
+                "Di baris paling akhir jawabanmu, tambahkan keterangan: "
+                "\n_\n_Model AI: AI Agent - Sup (OpenRouter LLM Engine)_"
             )
             ai_reply = ask_openrouter(message, system_prompt)
             send_fonnte_message(reply_target, ai_reply)
