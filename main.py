@@ -147,10 +147,11 @@ async def whatsapp_webhook(request: Request):
                 "1. DILARANG menggunakan salam atau kata pembuka informal (seperti 'Halo', 'Bentar lagi ya', 'Ini dia').\n"
                 "2. Awali langsung dengan judul formal dalam cetak tebal (contoh: *LAPORAN REKAPITULASI DATA PESANAN*).\n"
                 "3. Kelompokkan setiap item berdasarkan KATEGORI secara rapi menggunakan simbol poin (•).\n"
-                "4. Sertakan subtotal per kategori dan hitung TOTAL KESELURUHAN di akhir laporan.\n"
-                "5. Pada baris paling akhir pesan, wajib tambahkan keterangan model AI yang digunakan dalam format berikut:\n"
+                "4. Sertakan subtotal per kategori dan TOTAL KESELURUHAN di akhir laporan.\n"
+                "5. Pada bagian paling bawah laporan, wajib cantumkan daftar perintah pemicu dan identitas model AI dalam format berikut persis:\n"
                 "   _\n"
-                "   _Diproses oleh: AI Agent - Sup (Model: OpenRouter / Free LLM Engine)_"
+                "   _Diproses oleh: AI Agent - Sup (Model: OpenRouter / Free LLM Engine)_\n"
+                "   _Daftar Perintah Pemicu: !rekap, !sup, !tanya, !bot_"
             )
             ai_reply = ask_openrouter(message, system_prompt)
             send_fonnte_message(reply_target, ai_reply)
@@ -160,9 +161,11 @@ async def whatsapp_webhook(request: Request):
         elif any(msg_lower.startswith(trig) for trig in TRIGGERS):
             system_prompt = (
                 "Kamu adalah AI Agent - Sup, asisten cerdas berbasis Large Language Model (LLM). "
-                "Jawab pertanyaan anggota grup secara jelas, sopan, dan formal. "
-                "Di baris paling akhir jawabanmu, tambahkan keterangan: "
-                "\n_\n_Model AI: AI Agent - Sup (OpenRouter LLM Engine)_"
+                "Jawab pertanyaan anggota grup secara jelas, sopan, dan formal.\n\n"
+                "Di bagian paling bawah balasanmu, wajib tambahkan teks keterangan berikut:\n"
+                "_\n"
+                "_Model AI: AI Agent - Sup (OpenRouter LLM Engine)_\n"
+                "_Daftar Perintah Pemicu: !rekap, !sup, !tanya, !bot_"
             )
             ai_reply = ask_openrouter(message, system_prompt)
             send_fonnte_message(reply_target, ai_reply)
