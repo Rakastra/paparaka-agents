@@ -5,8 +5,8 @@ import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 
-# TOP-LEVEL VARIABLE (Dibutuhkan oleh Vercel)
-app = FastAPI(title="AI Agent - Sup")
+# TOP-LEVEL VARIABLE (Wajib untuk Vercel Python Builder)
+app = FastAPI(title="AI Agent - Sup Virtual Office")
 
 TARGET_GROUP_ID = "120363387413264013@g.us"
 TRIGGERS = ["!rekap", "!bot", "!tanya", "!sup"]
@@ -21,158 +21,505 @@ def virtual_office_3d():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>3D Virtual Office - AI Agent - Sup</title>
+        <title>3D Photorealistic Virtual Office - AI Agent - Sup</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            body { margin: 0; overflow: hidden; background-color: #1a1a24; font-family: sans-serif; }
+            body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Inter', sans-serif; user-select: none; }
             #webgl-container { width: 100vw; height: 100vh; display: block; }
+            /* Custom Canvas crosshair / overlay cursor */
+            canvas { cursor: grab; }
+            canvas:active { cursor: grabbing; }
         </style>
+        <!-- Import Three.js & OrbitControls via CDN -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     </head>
     <body>
-        <div class="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-700 text-white p-4 rounded-2xl shadow-2xl max-w-sm pointer-events-auto">
-            <div class="flex items-center gap-3 mb-2">
-                <span class="text-2xl">🏢</span>
+
+        <!-- UI OVERLAY: HEADER TOP-LEFT -->
+        <div class="absolute top-4 left-4 z-20 bg-slate-900/90 backdrop-blur border border-slate-700/80 text-white p-4 rounded-2xl shadow-2xl max-w-sm pointer-events-auto">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-emerald-500/20 border border-emerald-500/40 rounded-xl flex items-center justify-center text-xl">
+                    🏢
+                </div>
                 <div>
-                    <h1 class="font-bold text-sm text-emerald-400">3D Virtual Office: AI Agent - Sup</h1>
-                    <p class="text-[11px] text-slate-400">Mouse: Klik Kiri = Rotasi | Klik Kanan = Geser | Scroll = Zoom</p>
+                    <h1 class="font-bold text-sm text-emerald-400 tracking-wide">VIRTUAL OFFICE</h1>
+                    <p class="text-[11px] text-slate-400">AI Agent - Sup Command Center</p>
                 </div>
             </div>
-            <div id="status-badge" class="mt-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-2">
+            <div id="room-label" class="mt-3 bg-slate-800 border border-slate-700/80 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-200 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Agent Sup: Standby di Meja Utama</span>
+                <span id="current-room-text">Lokasi: RECEPTION AREA</span>
             </div>
         </div>
 
-        <div class="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-2xl shadow-2xl max-w-md pointer-events-auto">
-            <h2 class="text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">🧪 Testing Command Center</h2>
-            <div class="flex gap-2">
-                <input id="test-input" type="text" placeholder="Tes pesan (misal: !rekap Nasi Goreng 2)..." class="flex-1 bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500">
-                <button onclick="trigger3dAction()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition">
-                    Kirim
-                </button>
+        <!-- UI OVERLAY: TOP-RIGHT (AGENT STATUS & MINI MAP) -->
+        <div class="absolute top-4 right-4 z-20 flex flex-col items-end gap-3 pointer-events-auto">
+            <div class="bg-slate-900/90 backdrop-blur border border-slate-700/80 px-3.5 py-2 rounded-2xl shadow-2xl text-xs font-semibold text-emerald-400 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                <span>Agent: Online</span>
+            </div>
+
+            <!-- MINI MAP CANVAS -->
+            <div class="bg-slate-900/90 backdrop-blur border border-slate-700/80 p-2 rounded-2xl shadow-2xl text-center">
+                <div class="text-[10px] font-bold text-slate-400 mb-1 tracking-wider uppercase">Mini Map</div>
+                <canvas id="minimap" width="160" height="110" class="border border-slate-800 rounded-xl bg-slate-950"></canvas>
             </div>
         </div>
 
+        <!-- INTERACTION PROMPT -->
+        <div id="interaction-prompt" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-emerald-600/90 backdrop-blur text-white px-5 py-2.5 rounded-2xl shadow-2xl text-xs font-bold border border-emerald-400 animate-bounce pointer-events-none">
+            Press E to Interact
+        </div>
+
+        <!-- WELCOME BANNER (DISAPPEARS IN 4s) -->
+        <div id="welcome-banner" class="absolute top-1/4 left-1/2 -translate-x-1/2 z-30 bg-slate-900/95 border border-emerald-500/50 text-white px-8 py-4 rounded-3xl shadow-2xl text-center transition-opacity duration-1000 pointer-events-none">
+            <h2 class="text-lg font-bold text-emerald-400 mb-1">Welcome to Virtual Office</h2>
+            <p class="text-xs text-slate-300">Eksplorasi kantor 3D profesional dengan kontrol navigasi WASD dan Mouse Kamera 360°</p>
+        </div>
+
+        <!-- UI OVERLAY: BOTTOM CONTROLS & COMMAND CENTER -->
+        <div class="absolute bottom-4 left-4 right-4 z-20 flex flex-col md:flex-row justify-between items-end gap-4 pointer-events-none">
+            
+            <!-- Controls Legend -->
+            <div class="bg-slate-900/90 backdrop-blur border border-slate-700/80 text-slate-300 p-3.5 rounded-2xl shadow-2xl text-xs space-y-1 pointer-events-auto">
+                <div class="font-bold text-emerald-400 mb-1">🎮 Navigasi & Kamera</div>
+                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">WASD</span> — Move Agent</div>
+                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">Mouse Drag</span> — Rotate / Orbit 360°</div>
+                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">Scroll</span> — Zoom In / Out</div>
+                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">C</span> — Change Camera Mode</div>
+            </div>
+
+            <!-- Command Simulator -->
+            <div class="bg-slate-900/90 backdrop-blur border border-slate-700/80 p-3.5 rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto">
+                <div class="text-xs font-bold text-slate-300 mb-2 flex items-center justify-between">
+                    <span>🧪 WhatsApp Testing Console</span>
+                    <span class="text-[10px] text-emerald-400 font-mono">Fonnte Active</span>
+                </div>
+                <div class="flex gap-2">
+                    <input id="test-input" type="text" placeholder="Masukkan perintah (!rekap, !sup, !tanya)..." class="flex-1 bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500">
+                    <button onclick="sendSimulatedCommand()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition">
+                        Kirim
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- THREE.JS CANVAS CONTAINER -->
         <div id="webgl-container"></div>
 
         <script>
+            // Welcome banner auto fade-out
+            setTimeout(() => {
+                const banner = document.getElementById('welcome-banner');
+                if (banner) {
+                    banner.style.opacity = '0';
+                    setTimeout(() => banner.remove(), 1000);
+                }
+            }, 4000);
+
+            // --- THREE.JS ENGINE INITIALIZATION ---
             const container = document.getElementById('webgl-container');
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xdce5ed);
+            scene.background = new THREE.Color(0x0f172a);
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.018);
 
+            // CAMERA SETUP
             const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(25, 20, 25);
+            camera.position.set(0, 12, 18);
 
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            // RENDERER SETUP
+            const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
             container.appendChild(renderer.domElement);
 
+            // ORBIT CONTROLS SETUP
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2 - 0.05;
-            controls.target.set(0, 2, 0);
+            controls.maxPolarAngle = Math.PI / 2 - 0.02; // Prevents camera going below floor
+            controls.minDistance = 3;
+            controls.maxDistance = 45;
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            // LIGHTING SETUP
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(20, 40, 20);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
+            const mainLight = new THREE.DirectionalLight(0xfff7ed, 0.8);
+            mainLight.position.set(20, 35, 15);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            mainLight.shadow.camera.near = 0.5;
+            mainLight.shadow.camera.far = 80;
+            mainLight.shadow.camera.left = -20;
+            mainLight.shadow.camera.right = 20;
+            mainLight.shadow.camera.top = 20;
+            mainLight.shadow.camera.bottom = -20;
+            scene.add(mainLight);
 
-            // Floor
-            const floorGeo = new THREE.BoxGeometry(30, 0.4, 18);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0xc49a6c, roughness: 0.4 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.position.y = -0.2;
-            floor.receiveShadow = true;
-            scene.add(floor);
+            // Soft Office Indoor Ceiling Spotlights
+            function addCeilingSpot(x, z, color=0xffffff) {
+                const spot = new THREE.PointLight(color, 0.5, 10);
+                spot.position.set(x, 3.8, z);
+                scene.add(spot);
+            }
 
-            // Walls
-            function createWall(w, h, d, x, y, z, color = 0xeeeeee) {
-                const geo = new THREE.BoxGeometry(w, h, d);
-                const mat = new THREE.MeshStandardMaterial({ color: color });
+            // --- MATERIAL PALETTE ---
+            const materials = {
+                carpet: new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 }),
+                polishedTile: new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.2 }),
+                woodParquet: new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.4 }),
+                ceramicTile: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3 }),
+                wallPaint: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.7 }),
+                wallDark: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 }),
+                glass: new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, roughness: 0.1, transmission: 0.85 }),
+                woodFurniture: new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.5 }),
+                metalBlack: new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.2 }),
+                fabricBlue: new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.7 }),
+                plantGreen: new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 }),
+                agentBody: new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.5 }),
+                agentHead: new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.4 })
+            };
+
+            // --- COLLISION ARRAY & ROOM REGIONS ---
+            const collisionBoxes = [];
+            const roomRegions = [];
+
+            function addCollisionBox(x, z, width, depth) {
+                collisionBoxes.push({
+                    minX: x - width / 2,
+                    maxX: x + width / 2,
+                    minZ: z - depth / 2,
+                    maxZ: z + depth / 2
+                });
+            }
+
+            // --- FLOOR PLAN CONSTRUCTIONS (30m x 20m) ---
+            const officeWidth = 30;
+            const officeDepth = 20;
+
+            // 1. Base Floors with Regional Material Transitions
+            function createFloorSection(x, z, w, d, mat) {
+                const geo = new THREE.BoxGeometry(w, 0.2, d);
                 const mesh = new THREE.Mesh(geo, mat);
-                mesh.position.set(x, y, z);
-                mesh.castShadow = true;
+                mesh.position.set(x, -0.1, z);
                 mesh.receiveShadow = true;
                 scene.add(mesh);
             }
-            createWall(30, 6, 0.4, 0, 3, -9, 0x2c3e50);
-            createWall(0.4, 6, 18, -15, 3, 0, 0x34495e);
 
-            // Desk
-            const deskGeo = new THREE.BoxGeometry(4, 1.2, 2.5);
-            const deskMat = new THREE.MeshStandardMaterial({ color: 0x4a3525 });
-            const desk = new THREE.Mesh(deskGeo, deskMat);
-            desk.position.set(0, 0.6, 0);
-            desk.castShadow = true;
-            desk.receiveShadow = true;
-            scene.add(desk);
+            // Reception & Entrance (Polished Tile)
+            createFloorSection(0, 7.5, 12, 5, materials.polishedTile);
+            // Open Office (Carpet)
+            createFloorSection(0, 0, 16, 10, materials.carpet);
+            // Manager & Executive Offices (Wood Parquet)
+            createFloorSection(-10, -5, 10, 10, materials.woodParquet);
+            // Meeting Rooms (Carpet)
+            createFloorSection(10, -5, 10, 10, materials.carpet);
+            // Pantry & Toilet (Ceramic Tile)
+            createFloorSection(10, 6, 10, 8, materials.ceramicTile);
+            // Other Rooms & Corridors
+            createFloorSection(-10, 6, 10, 8, materials.carpet);
 
-            // Agent
+            // 2. Wall Building Helper
+            function buildWall(x, z, w, h, d, mat = materials.wallPaint, isGlass = false) {
+                const geo = new THREE.BoxGeometry(w, h, d);
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, h / 2, z);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+
+                if (!isGlass) {
+                    addCollisionBox(x, z, w, d);
+                }
+            }
+
+            // Outer Perimeter Walls
+            buildWall(0, -10, 30, 4, 0.4, materials.wallDark); // Back
+            buildWall(-15, 0, 0.4, 4, 20, materials.wallDark); // Left
+            buildWall(15, 0, 0.4, 4, 20, materials.wallDark);  // Right
+            buildWall(-9, 10, 12, 4, 0.4, materials.wallDark); // Front Left
+            buildWall(9, 10, 12, 4, 0.4, materials.wallDark);  // Front Right
+
+            // Glass Entrance Door Frame
+            buildWall(0, 10, 6, 4, 0.2, materials.glass, true);
+
+            // Room Partitions
+            buildWall(-5, -5, 0.3, 4, 10, materials.wallPaint); // Left Zone Divider
+            buildWall(5, -5, 0.3, 4, 10, materials.wallPaint);  // Right Zone Divider
+            buildWall(-10, 2, 10, 4, 0.3, materials.wallPaint); // North Left Corridor Wall
+            buildWall(10, 2, 10, 4, 0.3, materials.wallPaint);  // North Right Corridor Wall
+
+            // Spotlights setup across rooms
+            addCeilingSpot(0, 7.5);   // Reception
+            addCeilingSpot(0, 0);     // Open Office
+            addCeilingSpot(-10, -5);  // Manager
+            addCeilingSpot(10, -5);   // Meeting Room
+            addCeilingSpot(10, 6);    // Pantry
+
+            // --- FURNITURE BUILDERS ---
+
+            // Desk & Chair Combo Generator
+            function createWorkstation(x, z, angle = 0) {
+                const deskGroup = new THREE.Group();
+                
+                // Desk Table
+                const deskGeo = new THREE.BoxGeometry(1.6, 0.75, 0.8);
+                const deskMesh = new THREE.Mesh(deskGeo, materials.woodFurniture);
+                deskMesh.position.y = 0.375;
+                deskMesh.castShadow = true;
+                deskGroup.add(deskMesh);
+
+                // Monitor
+                const monGeo = new THREE.BoxGeometry(0.6, 0.4, 0.05);
+                const monMesh = new THREE.Mesh(monGeo, materials.metalBlack);
+                monMesh.position.set(0, 0.95, -0.2);
+                deskGroup.add(monMesh);
+
+                // Chair
+                const chairGeo = new THREE.BoxGeometry(0.5, 0.8, 0.5);
+                const chairMesh = new THREE.Mesh(chairGeo, materials.fabricBlue);
+                chairMesh.position.set(0, 0.4, 0.6);
+                deskGroup.add(chairMesh);
+
+                deskGroup.position.set(x, 0, z);
+                deskGroup.rotation.y = angle;
+                scene.add(deskGroup);
+
+                addCollisionBox(x, z, 1.8, 1.2);
+            }
+
+            // 12 Open Office Workstations
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 4; j++) {
+                    createWorkstation(-4.5 + j * 3, -3 + i * 2.5);
+                }
+            }
+
+            // Reception Counter
+            const recepCounter = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.1, 1.2), materials.woodDark || materials.woodFurniture);
+            recepCounter.position.set(0, 0.55, 6);
+            recepCounter.castShadow = true;
+            scene.add(recepCounter);
+            addCollisionBox(0, 6, 3.5, 1.2);
+
+            // Meeting Room 1 Table
+            const meetTable = new THREE.Mesh(new THREE.BoxGeometry(4, 0.75, 1.8), materials.woodFurniture);
+            meetTable.position.set(10, 0.375, -5);
+            meetTable.castShadow = true;
+            scene.add(meetTable);
+            addCollisionBox(10, -5, 4.2, 2.0);
+
+            // Pantry Kitchen Counter
+            const pantryCounter = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.9, 0.8), materials.metalBlack);
+            pantryCounter.position.set(10, 0.45, 8.5);
+            pantryCounter.castShadow = true;
+            scene.add(pantryCounter);
+            addCollisionBox(10, 8.5, 4.5, 0.8);
+
+            // Decorative Plants
+            function createPlant(x, z) {
+                const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.2, 0.6, 12), materials.polishedTile);
+                pot.position.set(x, 0.3, z);
+                const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5), materials.plantGreen);
+                leaves.position.set(x, 0.8, z);
+                scene.add(pot);
+                scene.add(leaves);
+                addCollisionBox(x, z, 0.6, 0.6);
+            }
+            createPlant(-5.5, 7.5);
+            createPlant(5.5, 7.5);
+            createPlant(-13, -8);
+            createPlant(13, -8);
+
+            // --- ROOM REGIONS DEFINITION FOR UI LABEL ---
+            roomRegions.push(
+                { name: "RECEPTION AREA", minX: -6, maxX: 6, minZ: 4, maxZ: 10 },
+                { name: "OPEN OFFICE", minX: -5, maxX: 5, minZ: -4, maxZ: 3 },
+                { name: "MANAGER & PRIVATE OFFICES", minX: -15, maxX: -5, minZ: -10, maxZ: 2 },
+                { name: "MEETING ROOM", minX: 5, maxX: 15, minZ: -10, maxZ: 2 },
+                { name: "PANTRY & BREAK AREA", minX: 5, maxX: 15, minZ: 3, maxZ: 10 },
+                { name: "HR, FINANCE & IT AREA", minX: -15, maxX: -5, minZ: 3, maxZ: 10 }
+            );
+
+            // --- MAIN CONTROLLABLE AGENT (HUMAN AVATAR) ---
             const agentGroup = new THREE.Group();
-            const headGeo = new THREE.SphereGeometry(0.4, 32, 32);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0x3498db });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 2.1;
-            agentGroup.add(head);
 
-            const bodyGeo = new THREE.CylinderGeometry(0.3, 0.4, 0.9, 16);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71 });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 1.45;
-            agentGroup.add(body);
+            // Head
+            const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), materials.agentHead);
+            headMesh.position.y = 1.55;
+            headMesh.castShadow = true;
+            agentGroup.add(headMesh);
 
-            agentGroup.position.set(0, 0, -1);
+            // Body / Torso
+            const torsoMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.7, 12), materials.agentBody);
+            torsoMesh.position.y = 1.0;
+            torsoMesh.castShadow = true;
+            agentGroup.add(torsoMesh);
+
+            // Legs
+            const legLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.65, 0.12), materials.metalBlack);
+            legLeft.position.set(-0.1, 0.325, 0);
+            agentGroup.add(legLeft);
+
+            const legRight = legLeft.clone();
+            legRight.position.set(0.1, 0.325, 0);
+            agentGroup.add(legRight);
+
+            // "YOU" Indicator Above Head
+            const indicatorGeo = new THREE.ConeGeometry(0.12, 0.25, 4);
+            const indicatorMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+            const indicator = new THREE.Mesh(indicatorGeo, indicatorMat);
+            indicator.rotation.x = Math.PI;
+            indicator.position.y = 2.0;
+            agentGroup.add(indicator);
+
+            // Set Starting Position at Reception
+            agentGroup.position.set(0, 0, 7.5);
             scene.add(agentGroup);
 
-            let isWorking = false;
-            function animate() {
-                requestAnimationFrame(animate);
-                if (agentGroup) {
-                    agentGroup.rotation.y = Math.sin(Date.now() * 0.002) * 0.15;
-                    if (isWorking) {
-                        agentGroup.position.y = Math.sin(Date.now() * 0.01) * 0.1;
-                    } else {
-                        agentGroup.position.y = 0;
+            // --- WASD NAVIGATION & CAMERA TRACKING LOGIC ---
+            const keysPressed = {};
+            const moveSpeed = 0.12;
+
+            window.addEventListener('keydown', (e) => {
+                keysPressed[e.key.toLowerCase()] = true;
+                if (e.key.toLowerCase() === 'c') {
+                    toggleCameraMode();
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                keysPressed[e.key.toLowerCase()] = false;
+            });
+
+            // Camera Modes: 0 = Third Person Follow, 1 = Close Third Person, 2 = Free Orbit
+            let cameraMode = 0;
+            function toggleCameraMode() {
+                cameraMode = (cameraMode + 1) % 3;
+            }
+
+            function checkCollision(newX, newZ) {
+                const radius = 0.35;
+                for (let box of collisionBoxes) {
+                    if (newX + radius > box.minX && newX - radius < box.maxX &&
+                        newZ + radius > box.minZ && newZ - radius < box.maxZ) {
+                        return true; // Collision detected
                     }
                 }
+                return false;
+            }
+
+            function updateAgentMovement() {
+                let dx = 0;
+                let dz = 0;
+
+                if (keysPressed['w'] || keysPressed['arrowup']) dz -= moveSpeed;
+                if (keysPressed['s'] || keysPressed['arrowdown']) dz += moveSpeed;
+                if (keysPressed['a'] || keysPressed['arrowleft']) dx -= moveSpeed;
+                if (keysPressed['d'] || keysPressed['arrowright']) dx += moveSpeed;
+
+                if (dx !== 0 || dz !== 0) {
+                    const newX = agentGroup.position.x + dx;
+                    const newZ = agentGroup.position.z + dz;
+
+                    // Check boundaries & collisions
+                    if (Math.abs(newX) < officeWidth / 2 - 0.5 && !checkCollision(newX, agentGroup.position.z)) {
+                        agentGroup.position.x = newX;
+                    }
+                    if (Math.abs(newZ) < officeDepth / 2 - 0.5 && !checkCollision(agentGroup.position.x, newZ)) {
+                        agentGroup.position.z = newZ;
+                    }
+
+                    // Rotate agent facing direction
+                    const targetAngle = Math.atan2(dx, dz);
+                    agentGroup.rotation.y = targetAngle;
+
+                    // Idle bobbing / walk animation
+                    indicator.position.y = 2.0 + Math.sin(Date.now() * 0.01) * 0.05;
+                }
+
+                // Update Controls Target to Agent
+                controls.target.copy(agentGroup.position).add(new THREE.Vector3(0, 1.2, 0));
+
+                if (cameraMode === 0) {
+                    // Third Person Follow
+                    const offset = new THREE.Vector3(0, 4, 6);
+                    camera.position.lerp(agentGroup.position.clone().add(offset), 0.08);
+                } else if (cameraMode === 1) {
+                    // Close Third Person
+                    const offset = new THREE.Vector3(0, 2.2, 3.2);
+                    camera.position.lerp(agentGroup.position.clone().add(offset), 0.08);
+                }
+                // Mode 2 = Free Orbit (Camera handled strictly by OrbitControls)
+
+                // Check Current Room Label
+                let currentRoom = "CORRIDOR";
+                for (let reg of roomRegions) {
+                    if (agentGroup.position.x >= reg.minX && agentGroup.position.x <= reg.maxX &&
+                        agentGroup.position.z >= reg.minZ && agentGroup.position.z <= reg.maxZ) {
+                        currentRoom = reg.name;
+                        break;
+                    }
+                }
+                document.getElementById('current-room-text').innerText = "Lokasi: " + currentRoom;
+            }
+
+            // --- MINI MAP RENDERER ---
+            const minimapCanvas = document.getElementById('minimap');
+            const mmCtx = minimapCanvas.getContext('2d');
+
+            function drawMiniMap() {
+                mmCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+                
+                // Map Scale
+                const scaleX = minimapCanvas.width / officeWidth;
+                const scaleY = minimapCanvas.height / officeDepth;
+
+                // Draw Outer Boundary
+                mmCtx.strokeStyle = "#334155";
+                mmCtx.lineWidth = 2;
+                mmCtx.strokeRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+
+                // Draw Agent Marker
+                const mmAgentX = (agentGroup.position.x + officeWidth / 2) * scaleX;
+                const mmAgentY = (agentGroup.position.z + officeDepth / 2) * scaleY;
+
+                mmCtx.fillStyle = "#10b981";
+                mmCtx.beginPath();
+                mmCtx.arc(mmAgentX, mmAgentY, 4, 0, Math.PI * 2);
+                mmCtx.fill();
+            }
+
+            // --- MAIN ANIMATION LOOP ---
+            function animate() {
+                requestAnimationFrame(animate);
+                updateAgentMovement();
                 controls.update();
                 renderer.render(scene, camera);
+                drawMiniMap();
             }
             animate();
 
+            // Resize Responsive Handler
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
 
-            function trigger3dAction() {
+            // Simulator Whatsapp Trigger
+            function sendSimulatedCommand() {
                 const input = document.getElementById('test-input');
                 const val = input.value.trim();
                 if (!val) return;
-
-                const badge = document.getElementById('status-badge');
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span><span>Agent Sup: Sedang Memproses Pesan...</span>`;
-                badge.className = "mt-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-2";
-
-                headMat.color.setHex(0xf39c12);
-                isWorking = true;
+                alert("Simulasi WhatsApp dikirim: " + val);
                 input.value = '';
-
-                setTimeout(() => {
-                    badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>Agent Sup: Standby di Meja Utama</span>`;
-                    badge.className = "mt-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-2";
-                    headMat.color.setHex(0x3498db);
-                    isWorking = false;
-                }, 2000);
             }
         </script>
     </body>
