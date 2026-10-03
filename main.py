@@ -1,7 +1,6 @@
 import json
 import os
 import urllib.parse
-from typing import Optional
 import requests
 from fastapi import FastAPI, Request
 
@@ -110,7 +109,6 @@ async def whatsapp_webhook(request: Request):
         data_dict.get("message") or data_dict.get("text") or ""
     ).strip()
 
-    # Ekstraksi ID Grup dari berbagai parameter Fonnte yang mungkin
     group_id = str(
         data_dict.get("group")
         or data_dict.get("target")
@@ -127,14 +125,18 @@ async def whatsapp_webhook(request: Request):
     if not message:
         return {"status": "ignored", "reason": "Pesan kosong"}
 
-    # Cek kecocokan grup target
-    is_target_group = (
-        (TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID)
-        if group_id
-        else False
+    # Tentukan nomor/ID tujuan pengiriman balasan
+    # Jika group_id ada, gunakan group_id. Jika kosong, kirim ke sender atau grup default.
+    reply_target = group_id if group_id else (sender if sender else TARGET_GROUP_ID)
+
+    # Pengecekan kecocokan grup:
+    # Lolos jika ID grup cocok ATAU jika group_id kosong (pesan dipicu oleh kata kunci langsung)
+    is_group_valid = (
+        not group_id
+        or (TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID)
     )
 
-    if is_target_group:
+    if is_group_valid:
         msg_lower = message.lower()
 
         # Pemicu !rekap
@@ -147,7 +149,7 @@ async def whatsapp_webhook(request: Request):
                 " dan profesional."
             )
             ai_reply = ask_openrouter(message, system_prompt)
-            send_fonnte_message(group_id, ai_reply)
+            send_fonnte_message(reply_target, ai_reply)
             return {"status": "processed", "type": "rekap"}
 
         # Pemicu !sup, !bot, !tanya
@@ -158,7 +160,7 @@ async def whatsapp_webhook(request: Request):
                 " dan jelas."
             )
             ai_reply = ask_openrouter(message, system_prompt)
-            send_fonnte_message(group_id, ai_reply)
+            send_fonnte_message(reply_target, ai_reply)
             return {"status": "processed", "type": "chat"}
 
     print(f"[REJECTED] Group ID '{group_id}' atau pemicu tidak sesuai.")
