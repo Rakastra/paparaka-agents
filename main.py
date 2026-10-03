@@ -11,7 +11,7 @@ class ChatRequest(BaseModel):
 
 @app.get("/")
 def home():
-    return {"status": "AI Agent Running", "message": "Server Render Aktif!"}
+    return {"status": "AI Agent Running", "message": "Server Agent Aktif!"}
 
 # Endpoint khusus untuk mencegah server sleep di Render (dipakai UptimeRobot)
 @app.get("/health")
