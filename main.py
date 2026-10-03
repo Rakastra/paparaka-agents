@@ -1,42 +1,95 @@
-import urllib.parse
-import json
+import os
+import requests
+from typing import Optional
+from fastapi import FastAPI, Form, Request
+
+app = FastAPI(title="AI Agent - Sup")
+
+TARGET_GROUP_ID = "120363387413264013@g.us"
+TRIGGERS = ["!rekap", "!bot", "!tanya", "!sup"]
+
+
+@app.get("/")
+def home():
+    return {"status": "AI Agent Running", "message": "Server Vercel Aktif!"}
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
+def ask_openrouter(user_message: str, system_prompt: str) -> str:
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        print("[ERROR] OPENROUTER_API_KEY tidak ditemukan!")
+        return "Error: API Key OpenRouter belum terpasang."
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "openrouter/free",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ]
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        data = response.json()
+        if response.status_code == 200:
+            return data["choices"][0]["message"]["content"]
+        else:
+            error_msg = data.get("error", {}).get("message", "Kesalahan API")
+            return f"Maaf, AI mengalami kendala: {error_msg}"
+    except Exception as e:
+        return f"Error koneksi ke OpenRouter: {str(e)}"
+
+
+def send_fonnte_message(target: str, text_message: str):
+    fonnte_token = os.getenv("FONNTE_TOKEN")
+    if not fonnte_token:
+        print("[ERROR] FONNTE_TOKEN tidak ditemukan!")
+        return
+
+    fonnte_url = "https://api.fonnte.com/send"
+    payload = {
+        "target": target,
+        "message": text_message
+    }
+    headers = {
+        "Authorization": fonnte_token
+    }
+    
+    try:
+        res = requests.post(fonnte_url, data=payload, headers=headers, timeout=15)
+        print("[FONNTE RESPONSE]", res.text)
+    except Exception as e:
+        print("[FONNTE SEND ERROR]", str(e))
+
 
 @app.post("/webhook/whatsapp")
-async def whatsapp_webhook(request: Request):
-    data_dict = {}
-    
-    # 1. Ambil raw body dari request Fonnte
-    raw_body = await request.body()
-    body_str = raw_body.decode("utf-8", errors="ignore")
-    
-    # 2. Coba parse sebagai Form Data / URL-Encoded
-    parsed_form = urllib.parse.parse_qs(body_str)
-    if parsed_form:
-        for key, val in parsed_form.items():
-            data_dict[key] = val[0] if isinstance(val, list) and len(val) > 0 else str(val)
-    
-    # 3. Jika gagal parse form, coba parse sebagai JSON
-    if not data_dict and body_str:
-        try:
-            data_dict = json.loads(body_str)
-        except Exception:
-            pass
+async def whatsapp_webhook(
+    sender: Optional[str] = Form(None),
+    message: Optional[str] = Form(None),
+    group: Optional[str] = Form(None),
+    target: Optional[str] = Form(None)
+):
+    sender_val = sender or ""
+    message_val = (message or "").strip()
+    group_id = group or target or ""
 
-    sender = str(data_dict.get("sender", ""))
-    message = str(data_dict.get("message", "")).strip()
-    
-    # Fonnte bisa mengirim ID grup di 'group', 'target', atau 'from'
-    group_id = str(data_dict.get("group") or data_dict.get("target") or data_dict.get("from") or "")
+    print(f"[INCOMING PARSED] Sender: '{sender_val}' | Group: '{group_id}' | Msg: '{message_val}'")
 
-    print(f"[INCOMING RAW] Body: {body_str}")
-    print(f"[INCOMING PARSED] Sender: '{sender}' | Group: '{group_id}' | Msg: '{message}'")
+    if not message_val:
+        return {"status": "ignored", "reason": "Pesan kosong"}
 
-    if not message:
-        return {"status": "ignored", "reason": "Pesan kosong atau gagal parse data"}
-
-    # Pengecekan grup
     if TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID:
-        msg_lower = message.lower()
+        msg_lower = message_val.lower()
         
         if msg_lower.startswith("!rekap"):
             system_prompt = (
@@ -44,16 +97,16 @@ async def whatsapp_webhook(request: Request):
                 "Tugasmu adalah menganalisis teks daftar pesanan/data dari anggota grup, lalu menyusun "
                 "rekapannya dengan rapi dan ringkas. Gunakan bahasa Indonesia yang santai dan profesional."
             )
-            ai_reply = ask_openrouter(message, system_prompt)
+            ai_reply = ask_openrouter(message_val, system_prompt)
             send_fonnte_message(group_id, ai_reply)
             return {"status": "processed", "type": "rekap"}
 
         elif any(msg_lower.startswith(trig) for trig in TRIGGERS):
             system_prompt = (
-                "Kamu adalah AI Agent - Sup, asisten cerdas di grup WhatsApp. "
+                "Kamu meupakan AI Agent - Sup, asisten cerdas di grup WhatsApp. "
                 "Bantu jawab pertanyaan anggota grup secara singkat, ramah, dan jelas."
             )
-            ai_reply = ask_openrouter(message, system_prompt)
+            ai_reply = ask_openrouter(message_val, system_prompt)
             send_fonnte_message(group_id, ai_reply)
             return {"status": "processed", "type": "chat"}
 
