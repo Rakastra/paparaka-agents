@@ -8,10 +8,6 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; }
     #canvas-container { width: 100vw; height: 100vh; display: block; }
-    #loading-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(18, 18, 18, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 99; transition: opacity 0.5s ease; }
-    .spinner { width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #00adb5; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    #loading-text { font-size: 1.1rem; color: #00adb5; }
     #ui-panel { position: absolute; top: 20px; left: 20px; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(8px); padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 10; max-width: 280px; }
     #ui-panel h2 { font-size: 1rem; margin-bottom: 8px; color: #00adb5; }
     #ui-panel p { font-size: 0.8rem; line-height: 1.4; color: #ccc; }
@@ -28,11 +24,6 @@
 </head>
 <body>
 
-  <div id="loading-screen">
-    <div class="spinner"></div>
-    <div id="loading-text">Memuat Officer Workstation... (0%)</div>
-  </div>
-
   <div id="ui-panel">
     <h2>👨‍💼 Officer Workstation</h2>
     <p>• <b>Klik Kiri + Geser:</b> Putar Kamera</p>
@@ -45,15 +36,14 @@
   <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+    // 1. Scene, Camera, Renderer Setup
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x18181c);
+    scene.background = new THREE.Color(0x1a1a24);
 
-    // Camera setup
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 5, 8);
+    camera.position.set(0, 6, 9);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -65,118 +55,143 @@
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.target.set(0, 1, 0);
+    controls.target.set(0, 1.2, 0);
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+    // 2. Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    dirLight.position.set(5, 8, 5);
+    dirLight.position.set(5, 10, 7);
     dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
     scene.add(dirLight);
 
-    // Ruangan Ukuran Pas (6x6 meter)
-    const floorGeo = new THREE.PlaneGeometry(6, 6);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x282c34, roughness: 0.8 });
+    const deskLight = new THREE.PointLight(0x00adb5, 0.8, 5);
+    deskLight.position.set(0, 2.5, 0);
+    scene.add(deskLight);
+
+    // Helper Function untuk buat Mesh
+    function createBox(w, h, d, color, x, y, z, rx=0, ry=0, rz=0) {
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      mesh.rotation.set(rx, ry, rz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    // 3. RUANGAN (Lantai & Dinding)
+    const floorGeo = new THREE.PlaneGeometry(8, 8);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x22242b, roughness: 0.8 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x3e4451, roughness: 0.9 });
-    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 3.5), wallMat);
-    backWall.position.set(0, 1.75, -3);
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x2d313b, roughness: 0.9 });
+    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(8, 5), wallMat);
+    backWall.position.set(0, 2.5, -4);
+    backWall.receiveShadow = true;
     scene.add(backWall);
 
-    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 3.5), wallMat);
-    leftWall.position.set(-3, 1.75, 0);
+    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(8, 5), wallMat);
+    leftWall.position.set(-4, 2.5, 0);
     leftWall.rotation.y = Math.PI / 2;
+    leftWall.receiveShadow = true;
     scene.add(leftWall);
 
-    // Layout 1 Officer Workstation Proper
-    const officeAssets = [
-      // Karpet Dasar
-      { name: 'Rug.glb', pos: [0, 0.01, 0], rot: [0, 0, 0], scale: [1.2, 1, 1.2] },
-      
-      // Meja & Kursi Kerja
-      { name: 'Table.glb', pos: [0, 0, 0], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Office Chair.glb', pos: [0, 0, 1.1], rot: [0, 0, 0], scale: [1, 1, 1] },
-      
-      // Perangkat Komputer di Atas Meja
-      { name: 'Monitor.glb', pos: [0, 0.75, -0.2], rot: [0, 0, 0], scale: [0.7, 0.7, 0.7] },
-      { name: 'Mousepad.glb', pos: [0, 0.74, 0.25], rot: [0, 0, 0], scale: [0.8, 1, 0.8] },
-      { name: 'Keyboard.glb', pos: [-0.1, 0.75, 0.25], rot: [0, 0, 0], scale: [0.6, 0.6, 0.6] },
-      { name: 'Mouse.glb', pos: [0.35, 0.75, 0.25], rot: [0, 0, 0], scale: [0.6, 0.6, 0.6] },
-      { name: 'Coffee cup.glb', pos: [-0.6, 0.75, 0.1], rot: [0, 0, 0], scale: [0.8, 0.8, 0.8] },
-      
-      // Sisi Kiri Meja (Kabinet & Printer)
-      { name: 'File Cabinet.glb', pos: [-1.8, 0, -0.2], rot: [0, Math.PI / 2, 0], scale: [0.9, 0.9, 0.9] },
-      { name: 'Printer.glb', pos: [-1.8, 0.75, -0.2], rot: [0, Math.PI / 2, 0], scale: [0.8, 0.8, 0.8] },
-      { name: 'Trashcan.glb', pos: [-1.4, 0, 0.8], rot: [0, 0, 0], scale: [0.8, 0.8, 0.8] },
+    // Karpet Karakter
+    createBox(3.5, 0.01, 3, 0x393e46, 0, 0.005, 0.2);
 
-      // Sisi Belakang Ruangan (Dekorasi & Papan Kerja)
-      { name: 'Medium Book Shelf.glb', pos: [1.8, 0, -2.5], rot: [0, 0, 0], scale: [0.9, 0.9, 0.9] },
-      { name: 'Whiteboard.glb', pos: [-0.8, 1.6, -2.9], rot: [0, 0, 0], scale: [0.8, 0.8, 0.8] },
-      { name: 'Analog clock.glb', pos: [1.2, 2.5, -2.9], rot: [0, 0, 0], scale: [0.8, 0.8, 0.8] },
+    // 4. MEJA KERJA (Officer Desk)
+    // Papan Meja Utas Kayu
+    createBox(2.4, 0.08, 1.2, 0x8d5b4c, 0, 1.2, 0);
+    // Kaki Meja Metal
+    createBox(0.08, 1.2, 1.1, 0x222222, -1.1, 0.6, 0);
+    createBox(0.08, 1.2, 1.1, 0x222222, 1.1, 0.6, 0);
 
-      // Tanaman Ruangan
-      { name: 'Potted Plant.glb', pos: [-2.3, 0, -2.3], rot: [0, 0, 0], scale: [0.9, 0.9, 0.9] }
-    ];
+    // Laci Meja Kanan
+    createBox(0.5, 0.5, 0.9, 0x333333, 0.75, 0.9, 0);
 
-    const loader = new GLTFLoader();
-    let loadedCount = 0;
-    const totalAssets = officeAssets.length;
-    const loadingText = document.getElementById('loading-text');
-    const loadingScreen = document.getElementById('loading-screen');
+    // 5. PERANGKAT KOMPUTER
+    // Stand & Layar Monitor Dual Setup
+    createBox(0.4, 0.02, 0.2, 0x111111, 0, 1.25, -0.2);
+    createBox(0.05, 0.35, 0.05, 0x111111, 0, 1.42, -0.2);
+    // Monitor Utama
+    createBox(1.1, 0.6, 0.03, 0x222222, 0, 1.7, -0.2);
+    createBox(1.04, 0.54, 0.01, 0x00adb5, 0, 1.7, -0.18); // Layar Menyala
+    
+    // Keyboard & Mousepad
+    createBox(0.9, 0.01, 0.35, 0x1b1b1b, 0, 1.24, 0.25); // Deskmat
+    createBox(0.5, 0.02, 0.16, 0xeeeeee, -0.1, 1.25, 0.25); // Keyboard
+    createBox(0.08, 0.02, 0.12, 0xeeeeee, 0.28, 1.25, 0.25); // Mouse
 
-    function updateProgress() {
-      loadedCount++;
-      const progress = Math.round((loadedCount / totalAssets) * 100);
-      loadingText.innerText = `Memuat Officer Workstation... (${progress}%)`;
-      if (loadedCount === totalAssets) {
-        setTimeout(() => {
-          loadingScreen.style.opacity = '0';
-          setTimeout(() => loadingScreen.style.display = 'none', 500);
-        }, 300);
-      }
-    }
+    // Cangkir Kopi
+    const cupGeo = new THREE.CylinderGeometry(0.05, 0.04, 0.12, 16);
+    const cupMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+    const cup = new THREE.Mesh(cupGeo, cupMat);
+    cup.position.set(-0.7, 1.3, 0.1);
+    cup.castShadow = true;
+    scene.add(cup);
 
-    officeAssets.forEach(asset => {
-      const fileUrl = `/static/models/office/${asset.name}`;
+    // 6. KURSI KERJA (Office Chair)
+    // Dudukan & Sandaran
+    createBox(0.6, 0.08, 0.6, 0x22252a, 0, 0.7, 1.1);
+    createBox(0.55, 0.65, 0.08, 0x22252a, 0, 1.05, 1.36);
+    // Tiang & Kaki Kursi
+    const stemGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.3, 12);
+    const stemMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.set(0, 0.5, 1.1);
+    scene.add(stem);
+    createBox(0.6, 0.04, 0.6, 0x111111, 0, 0.35, 1.1);
 
-      loader.load(
-        fileUrl,
-        (gltf) => {
-          const model = gltf.scene;
-          model.position.set(...asset.pos);
-          model.rotation.set(...asset.rot);
-          model.scale.set(...asset.scale);
+    // 7. PERALATAN TAMBAHAN RUANGAN
+    // Rak Buku Belakang
+    createBox(1.2, 2.2, 0.4, 0x4a3525, -2.8, 1.1, -3.5);
+    createBox(1.1, 0.04, 0.38, 0x3a2515, -2.8, 0.8, -3.5);
+    createBox(1.1, 0.04, 0.38, 0x3a2515, -2.8, 1.4, -3.5);
 
-          model.traverse((child) => {
-            if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-            }
-          });
+    // Papan Tulis (Whiteboard)
+    createBox(1.8, 1.1, 0.03, 0xdddddd, 0.8, 2.4, -3.95);
+    createBox(1.86, 1.16, 0.01, 0x8d5b4c, 0.8, 2.4, -3.97); // Bingkai kayu
 
-          scene.add(model);
-          updateProgress();
-        },
-        undefined,
-        (error) => {
-          console.warn(`File tidak ditemukan/dilewati: ${asset.name}`);
-          updateProgress();
-        }
-      );
-    });
+    // Tanaman Hias (Potted Plant)
+    const potGeo = new THREE.CylinderGeometry(0.2, 0.15, 0.4, 16);
+    const potMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+    const pot = new THREE.Mesh(potGeo, potMat);
+    pot.position.set(2.8, 0.2, -3.2);
+    pot.castShadow = true;
+    scene.add(pot);
 
+    const plantGeo = new THREE.DodecahedronGeometry(0.35);
+    const plantMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.9 });
+    const plant = new THREE.Mesh(plantGeo, plantMat);
+    plant.position.set(2.8, 0.55, -3.2);
+    plant.castShadow = true;
+    scene.add(plant);
+
+    // Tempat Sampah
+    const binGeo = new THREE.CylinderGeometry(0.18, 0.14, 0.4, 16);
+    const binMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const bin = new THREE.Mesh(binGeo, binMat);
+    bin.position.set(1.4, 0.2, 0.1);
+    bin.castShadow = true;
+    scene.add(bin);
+
+    // 8. Responsive Resize
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    // 9. Animation Loop
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
