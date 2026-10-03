@@ -21,12 +21,11 @@ def virtual_office_3d():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>3D Photorealistic Virtual Office - AI Agent - Sup</title>
+        <title>3D Isometric Architectural Cutaway Virtual Office - AI Agent - Sup</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Inter', sans-serif; user-select: none; }
+            body { margin: 0; overflow: hidden; background-color: #0b0f19; font-family: 'Inter', sans-serif; user-select: none; }
             #webgl-container { width: 100vw; height: 100vh; display: block; }
-            /* Custom Canvas crosshair / overlay cursor */
             canvas { cursor: grab; }
             canvas:active { cursor: grabbing; }
         </style>
@@ -43,13 +42,13 @@ def virtual_office_3d():
                     🏢
                 </div>
                 <div>
-                    <h1 class="font-bold text-sm text-emerald-400 tracking-wide">VIRTUAL OFFICE</h1>
-                    <p class="text-[11px] text-slate-400">AI Agent - Sup Command Center</p>
+                    <h1 class="font-bold text-sm text-emerald-400 tracking-wide">3D ARCHITECTURAL OFFICE</h1>
+                    <p class="text-[11px] text-slate-400">Isometric Cutaway Model — AI Agent - Sup</p>
                 </div>
             </div>
             <div id="room-label" class="mt-3 bg-slate-800 border border-slate-700/80 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-200 flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span id="current-room-text">Lokasi: RECEPTION AREA</span>
+                <span id="current-room-text">Lokasi: RECEPTION & LOBBY</span>
             </div>
         </div>
 
@@ -72,10 +71,10 @@ def virtual_office_3d():
             Press E to Interact
         </div>
 
-        <!-- WELCOME BANNER (DISAPPEARS IN 4s) -->
+        <!-- WELCOME BANNER -->
         <div id="welcome-banner" class="absolute top-1/4 left-1/2 -translate-x-1/2 z-30 bg-slate-900/95 border border-emerald-500/50 text-white px-8 py-4 rounded-3xl shadow-2xl text-center transition-opacity duration-1000 pointer-events-none">
-            <h2 class="text-lg font-bold text-emerald-400 mb-1">Welcome to Virtual Office</h2>
-            <p class="text-xs text-slate-300">Eksplorasi kantor 3D profesional dengan kontrol navigasi WASD dan Mouse Kamera 360°</p>
+            <h2 class="text-lg font-bold text-emerald-400 mb-1">Interactive 3D Miniature Cutaway Office</h2>
+            <p class="text-xs text-slate-300">Satu lantai kantor lengkap (30m x 20m). Putar kamera 360°, Zoom In, atau gunakan WASD untuk navigasi agent.</p>
         </div>
 
         <!-- UI OVERLAY: BOTTOM CONTROLS & COMMAND CENTER -->
@@ -83,11 +82,11 @@ def virtual_office_3d():
             
             <!-- Controls Legend -->
             <div class="bg-slate-900/90 backdrop-blur border border-slate-700/80 text-slate-300 p-3.5 rounded-2xl shadow-2xl text-xs space-y-1 pointer-events-auto">
-                <div class="font-bold text-emerald-400 mb-1">🎮 Navigasi & Kamera</div>
-                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">WASD</span> — Move Agent</div>
-                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">Mouse Drag</span> — Rotate / Orbit 360°</div>
-                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">Scroll</span> — Zoom In / Out</div>
-                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">C</span> — Change Camera Mode</div>
+                <div class="font-bold text-emerald-400 mb-1">🎮 Modus Kamera & Navigasi</div>
+                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">WASD</span> — Move Main Agent</div>
+                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">Mouse Drag</span> — Rotate 360° / Orbit</div>
+                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">Scroll</span> — Zoom Deep Desk / Full View</div>
+                <div><span class="bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded text-[10px] text-white">C</span> — Switch Mode (Architectural / Agent View)</div>
             </div>
 
             <!-- Command Simulator -->
@@ -116,17 +115,16 @@ def virtual_office_3d():
                     banner.style.opacity = '0';
                     setTimeout(() => banner.remove(), 1000);
                 }
-            }, 4000);
+            }, 4500);
 
             // --- THREE.JS ENGINE INITIALIZATION ---
             const container = document.getElementById('webgl-container');
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f172a);
-            scene.fog = new THREE.FogExp2(0x0f172a, 0.018);
+            scene.background = new THREE.Color(0x0b0f19);
 
-            // CAMERA SETUP
-            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 12, 18);
+            // CAMERA SETUP (Elevated 3/4 Isometric Perspective)
+            const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(28, 26, 32); // Elevated isometric viewpoint
 
             // RENDERER SETUP
             const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -141,49 +139,50 @@ def virtual_office_3d():
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2 - 0.02; // Prevents camera going below floor
-            controls.minDistance = 3;
-            controls.maxDistance = 45;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05; // Keep above floor line
+            controls.minDistance = 4;
+            controls.maxDistance = 65;
+            controls.target.set(0, 0, 0); // Center on office miniature
 
-            // LIGHTING SETUP
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            // LIGHTING SETUP (Architectural Studio Quality)
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xfff7ed, 0.8);
-            mainLight.position.set(20, 35, 15);
-            mainLight.castShadow = true;
-            mainLight.shadow.mapSize.width = 2048;
-            mainLight.shadow.mapSize.height = 2048;
-            mainLight.shadow.camera.near = 0.5;
-            mainLight.shadow.camera.far = 80;
-            mainLight.shadow.camera.left = -20;
-            mainLight.shadow.camera.right = 20;
-            mainLight.shadow.camera.top = 20;
-            mainLight.shadow.camera.bottom = -20;
-            scene.add(mainLight);
+            const sunLight = new THREE.DirectionalLight(0xfffaf0, 0.95);
+            sunLight.position.set(25, 40, 20);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 100;
+            sunLight.shadow.camera.left = -22;
+            sunLight.shadow.camera.right = 22;
+            sunLight.shadow.camera.top = 18;
+            sunLight.shadow.camera.bottom = -18;
+            scene.add(sunLight);
 
-            // Soft Office Indoor Ceiling Spotlights
-            function addCeilingSpot(x, z, color=0xffffff) {
-                const spot = new THREE.PointLight(color, 0.5, 10);
-                spot.position.set(x, 3.8, z);
-                scene.add(spot);
-            }
+            // Soft Fill Light for Cutaway Visibility
+            const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.35);
+            fillLight.position.set(-20, 20, -20);
+            scene.add(fillLight);
 
-            // --- MATERIAL PALETTE ---
+            // --- MATERIAL PALETTE (Realistic Corporate) ---
             const materials = {
                 carpet: new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 }),
-                polishedTile: new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.2 }),
-                woodParquet: new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.4 }),
+                woodFloor: new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.4 }),
+                polishedTile: new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.2 }),
                 ceramicTile: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.3 }),
-                wallPaint: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.7 }),
-                wallDark: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 }),
-                glass: new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, roughness: 0.1, transmission: 0.85 }),
+                outerWall: new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 }),
+                innerWall: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.7 }),
+                lowWall: new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.6 }),
+                glass: new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.25, roughness: 0.05, transmission: 0.9 }),
                 woodFurniture: new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.5 }),
-                metalBlack: new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.2 }),
-                fabricBlue: new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.7 }),
+                metalDark: new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.2 }),
+                fabricBlue: new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.7 }),
                 plantGreen: new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 }),
                 agentBody: new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.5 }),
-                agentHead: new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.4 })
+                agentHead: new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.4 }),
+                npcBody: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5 })
             };
 
             // --- COLLISION ARRAY & ROOM REGIONS ---
@@ -199,11 +198,10 @@ def virtual_office_3d():
                 });
             }
 
-            // --- FLOOR PLAN CONSTRUCTIONS (30m x 20m) ---
+            // --- FLOOR PLAN CONSTRUCTIONS (30m x 20m Cutaway Architectural) ---
             const officeWidth = 30;
             const officeDepth = 20;
 
-            // 1. Base Floors with Regional Material Transitions
             function createFloorSection(x, z, w, d, mat) {
                 const geo = new THREE.BoxGeometry(w, 0.2, d);
                 const mesh = new THREE.Mesh(geo, mat);
@@ -212,21 +210,16 @@ def virtual_office_3d():
                 scene.add(mesh);
             }
 
-            // Reception & Entrance (Polished Tile)
-            createFloorSection(0, 7.5, 12, 5, materials.polishedTile);
-            // Open Office (Carpet)
-            createFloorSection(0, 0, 16, 10, materials.carpet);
-            // Manager & Executive Offices (Wood Parquet)
-            createFloorSection(-10, -5, 10, 10, materials.woodParquet);
-            // Meeting Rooms (Carpet)
-            createFloorSection(10, -5, 10, 10, materials.carpet);
-            // Pantry & Toilet (Ceramic Tile)
-            createFloorSection(10, 6, 10, 8, materials.ceramicTile);
-            // Other Rooms & Corridors
-            createFloorSection(-10, 6, 10, 8, materials.carpet);
+            // Zones
+            createFloorSection(0, 4, 10, 8, materials.polishedTile);    // Reception / Lobby
+            createFloorSection(0, -4, 18, 8, materials.carpet);          // Open Office Area
+            createFloorSection(-10, -5, 10, 10, materials.woodFloor);    // Manager & Private Offices
+            createFloorSection(10, -5, 10, 10, materials.carpet);        // Meeting Rooms
+            createFloorSection(-10, 5, 10, 8, materials.carpet);         // HR, Finance, IT
+            createFloorSection(10, 5, 10, 8, materials.ceramicTile);     // Pantry, Storage, Toilet
 
-            // 2. Wall Building Helper
-            function buildWall(x, z, w, h, d, mat = materials.wallPaint, isGlass = false) {
+            // WALL BUILDING HELPER (Low/Cutaway Front Walls for Unobstructed View)
+            function buildWall(x, z, w, h, d, mat = materials.innerWall, isGlass = false) {
                 const geo = new THREE.BoxGeometry(w, h, d);
                 const mesh = new THREE.Mesh(geo, mat);
                 mesh.position.set(x, h / 2, z);
@@ -239,151 +232,197 @@ def virtual_office_3d():
                 }
             }
 
-            // Outer Perimeter Walls
-            buildWall(0, -10, 30, 4, 0.4, materials.wallDark); // Back
-            buildWall(-15, 0, 0.4, 4, 20, materials.wallDark); // Left
-            buildWall(15, 0, 0.4, 4, 20, materials.wallDark);  // Right
-            buildWall(-9, 10, 12, 4, 0.4, materials.wallDark); // Front Left
-            buildWall(9, 10, 12, 4, 0.4, materials.wallDark);  // Front Right
+            // Cutaway Outer Frame (Rear & Side Walls High, Front Wall Removed/Low)
+            buildWall(0, -10, 30, 3.2, 0.4, materials.outerWall);  // Rear Back Wall (Full)
+            buildWall(-15, 0, 0.4, 3.2, 20, materials.outerWall);  // Left Exterior Wall
+            buildWall(15, 0, 0.4, 3.2, 20, materials.outerWall);   // Right Exterior Wall
+            buildWall(-10, 10, 10, 0.6, 0.4, materials.lowWall);   // Cutaway Front Left Wall
+            buildWall(10, 10, 10, 0.6, 0.4, materials.lowWall);    // Cutaway Front Right Wall
 
-            // Glass Entrance Door Frame
-            buildWall(0, 10, 6, 4, 0.2, materials.glass, true);
+            // Front Glass Entrance
+            buildWall(0, 10, 10, 2.8, 0.1, materials.glass, true);
 
-            // Room Partitions
-            buildWall(-5, -5, 0.3, 4, 10, materials.wallPaint); // Left Zone Divider
-            buildWall(5, -5, 0.3, 4, 10, materials.wallPaint);  // Right Zone Divider
-            buildWall(-10, 2, 10, 4, 0.3, materials.wallPaint); // North Left Corridor Wall
-            buildWall(10, 2, 10, 4, 0.3, materials.wallPaint);  // North Right Corridor Wall
+            // Interior Partitions (Glass and Low Walls to maximize interior view)
+            buildWall(-5, -5, 0.2, 2.8, 10, materials.glass, true); // Left Zone Partition
+            buildWall(5, -5, 0.2, 2.8, 10, materials.glass, true);  // Right Zone Partition
+            buildWall(-10, 1, 10, 2.8, 0.2, materials.innerWall);   // HR/Finance Division Wall
+            buildWall(10, 1, 10, 2.8, 0.2, materials.innerWall);    // Pantry/Storage Division Wall
 
-            // Spotlights setup across rooms
-            addCeilingSpot(0, 7.5);   // Reception
-            addCeilingSpot(0, 0);     // Open Office
-            addCeilingSpot(-10, -5);  // Manager
-            addCeilingSpot(10, -5);   // Meeting Room
-            addCeilingSpot(10, 6);    // Pantry
+            // --- FURNITURE DENSITY & SPECIFIC ROOM OBJECTS ---
 
-            // --- FURNITURE BUILDERS ---
+            // 1. Reception & Waiting Area
+            const recepCounter = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.0, 1.0), materials.woodFurniture);
+            recepCounter.position.set(0, 0.5, 5);
+            recepCounter.castShadow = true;
+            scene.add(recepCounter);
+            addCollisionBox(0, 5, 3.2, 1.0);
 
-            // Desk & Chair Combo Generator
-            function createWorkstation(x, z, angle = 0) {
-                const deskGroup = new THREE.Group();
+            // Reception PC & Chair
+            const monRec = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.05), materials.metalDark);
+            monRec.position.set(0, 1.15, 4.8);
+            scene.add(monRec);
+
+            // Waiting Sofas
+            const sofa = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.6, 0.8), materials.fabricBlue);
+            sofa.position.set(-3, 0.3, 7.5);
+            sofa.castShadow = true;
+            scene.add(sofa);
+            addCollisionBox(-3, 7.5, 2.0, 0.8);
+
+            // 2. Open Office (12 Workstations with Natural Variations)
+            function createWorkstation(x, z, type = 0) {
+                const group = new THREE.Group();
                 
-                // Desk Table
-                const deskGeo = new THREE.BoxGeometry(1.6, 0.75, 0.8);
-                const deskMesh = new THREE.Mesh(deskGeo, materials.woodFurniture);
-                deskMesh.position.y = 0.375;
-                deskMesh.castShadow = true;
-                deskGroup.add(deskMesh);
-
-                // Monitor
-                const monGeo = new THREE.BoxGeometry(0.6, 0.4, 0.05);
-                const monMesh = new THREE.Mesh(monGeo, materials.metalBlack);
-                monMesh.position.set(0, 0.95, -0.2);
-                deskGroup.add(monMesh);
+                // Desk
+                const desk = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.75, 0.8), materials.woodFurniture);
+                desk.position.y = 0.375;
+                desk.castShadow = true;
+                group.add(desk);
 
                 // Chair
-                const chairGeo = new THREE.BoxGeometry(0.5, 0.8, 0.5);
-                const chairMesh = new THREE.Mesh(chairGeo, materials.fabricBlue);
-                chairMesh.position.set(0, 0.4, 0.6);
-                deskGroup.add(chairMesh);
+                const chair = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.5), materials.fabricBlue);
+                chair.position.set(0, 0.4, 0.65);
+                group.add(chair);
 
-                deskGroup.position.set(x, 0, z);
-                deskGroup.rotation.y = angle;
-                scene.add(deskGroup);
+                // Equipment Variation
+                if (type === 0) { // Dual Monitor
+                    const m1 = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.35, 0.04), materials.metalDark);
+                    m1.position.set(-0.25, 0.92, -0.2);
+                    m1.rotation.y = 0.15;
+                    const m2 = m1.clone();
+                    m2.position.set(0.25, 0.92, -0.2);
+                    m2.rotation.y = -0.15;
+                    group.add(m1, m2);
+                } else if (type === 1) { // Laptop & Coffee
+                    const laptop = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.02, 0.3), materials.metalDark);
+                    laptop.position.set(0, 0.76, -0.1);
+                    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.03, 0.1), materials.polishedTile);
+                    cup.position.set(0.4, 0.8, 0.1);
+                    group.add(laptop, cup);
+                } else { // Single Monitor & Notebook
+                    const m1 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.38, 0.04), materials.metalDark);
+                    m1.position.set(0, 0.94, -0.2);
+                    const book = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.28), materials.fabricBlue);
+                    book.position.set(-0.4, 0.76, 0.1);
+                    group.add(m1, book);
+                }
 
-                addCollisionBox(x, z, 1.8, 1.2);
+                group.position.set(x, 0, z);
+                scene.add(group);
+                addCollisionBox(x, z, 1.6, 1.2);
             }
 
-            // 12 Open Office Workstations
-            for (let i = 0; i < 3; i++) {
-                for (let j = 0; j < 4; j++) {
-                    createWorkstation(-4.5 + j * 3, -3 + i * 2.5);
+            // Layout 12 Desks
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 4; c++) {
+                    createWorkstation(-4.5 + c * 3.0, -2.5 - r * 2.5, (r + c) % 3);
                 }
             }
 
-            // Reception Counter
-            const recepCounter = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.1, 1.2), materials.woodDark || materials.woodFurniture);
-            recepCounter.position.set(0, 0.55, 6);
-            recepCounter.castShadow = true;
-            scene.add(recepCounter);
-            addCollisionBox(0, 6, 3.5, 1.2);
+            // 3. Manager Office
+            const mgrDesk = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 1.0), materials.woodFurniture);
+            mgrDesk.position.set(-10, 0.4, -6);
+            mgrDesk.castShadow = true;
+            scene.add(mgrDesk);
+            addCollisionBox(-10, -6, 2.4, 1.2);
 
-            // Meeting Room 1 Table
-            const meetTable = new THREE.Mesh(new THREE.BoxGeometry(4, 0.75, 1.8), materials.woodFurniture);
-            meetTable.position.set(10, 0.375, -5);
-            meetTable.castShadow = true;
-            scene.add(meetTable);
-            addCollisionBox(10, -5, 4.2, 2.0);
+            // 4. Meeting Rooms
+            const meetTable1 = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.75, 1.6), materials.woodFurniture);
+            meetTable1.position.set(10, 0.375, -6);
+            meetTable1.castShadow = true;
+            scene.add(meetTable1);
+            addCollisionBox(10, -6, 3.8, 1.8);
 
-            // Pantry Kitchen Counter
-            const pantryCounter = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.9, 0.8), materials.metalBlack);
-            pantryCounter.position.set(10, 0.45, 8.5);
-            pantryCounter.castShadow = true;
-            scene.add(pantryCounter);
-            addCollisionBox(10, 8.5, 4.5, 0.8);
+            // Wall Display Screen in Meeting Room
+            const tvScreen = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.1, 0.05), materials.metalDark);
+            tvScreen.position.set(10, 2.0, -9.8);
+            scene.add(tvScreen);
+
+            // 5. Sales Area Dashboard Screen
+            const salesBoard = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.0, 0.05), materials.metalDark);
+            salesBoard.position.set(-14.7, 2.0, 5);
+            salesBoard.rotation.y = Math.PI / 2;
+            scene.add(salesBoard);
+
+            // 6. Pantry
+            const pantryBar = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.9, 0.8), materials.metalDark);
+            pantryBar.position.set(10, 0.45, 8.5);
+            pantryBar.castShadow = true;
+            scene.add(pantryBar);
+            addCollisionBox(10, 8.5, 4.0, 0.8);
 
             // Decorative Plants
-            function createPlant(x, z) {
-                const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.2, 0.6, 12), materials.polishedTile);
-                pot.position.set(x, 0.3, z);
-                const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(0.5), materials.plantGreen);
-                leaves.position.set(x, 0.8, z);
-                scene.add(pot);
-                scene.add(leaves);
-                addCollisionBox(x, z, 0.6, 0.6);
+            function addPlant(x, z) {
+                const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.5, 12), materials.polishedTile);
+                pot.position.set(x, 0.25, z);
+                const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(0.45), materials.plantGreen);
+                leaves.position.set(x, 0.7, z);
+                scene.add(pot, leaves);
+                addCollisionBox(x, z, 0.5, 0.5);
             }
-            createPlant(-5.5, 7.5);
-            createPlant(5.5, 7.5);
-            createPlant(-13, -8);
-            createPlant(13, -8);
+            addPlant(-4.8, 5.0);
+            addPlant(4.8, 5.0);
+            addPlant(-14, -9);
+            addPlant(14, -9);
 
-            // --- ROOM REGIONS DEFINITION FOR UI LABEL ---
+            // 7. Decorative NPC Employees
+            function addNPC(x, z, rot = 0) {
+                const npc = new THREE.Group();
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), materials.agentHead);
+                head.position.y = 1.45;
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.65, 10), materials.npcBody);
+                body.position.y = 0.95;
+                npc.add(head, body);
+                npc.position.set(x, 0, z);
+                npc.rotation.y = rot;
+                scene.add(npc);
+            }
+            addNPC(-10, -5, Math.PI / 4); // Manager sitting
+            addNPC(10, -5, -Math.PI / 2); // Meeting member
+            addNPC(2, 5, 0);             // Reception visitor
+
+            // --- ROOM REGIONS FOR LABELS ---
             roomRegions.push(
-                { name: "RECEPTION AREA", minX: -6, maxX: 6, minZ: 4, maxZ: 10 },
-                { name: "OPEN OFFICE", minX: -5, maxX: 5, minZ: -4, maxZ: 3 },
-                { name: "MANAGER & PRIVATE OFFICES", minX: -15, maxX: -5, minZ: -10, maxZ: 2 },
-                { name: "MEETING ROOM", minX: 5, maxX: 15, minZ: -10, maxZ: 2 },
-                { name: "PANTRY & BREAK AREA", minX: 5, maxX: 15, minZ: 3, maxZ: 10 },
-                { name: "HR, FINANCE & IT AREA", minX: -15, maxX: -5, minZ: 3, maxZ: 10 }
+                { name: "RECEPTION & LOBBY", minX: -5, maxX: 5, minZ: 2, maxZ: 10 },
+                { name: "OPEN OFFICE AREA", minX: -5, maxX: 5, minZ: -9, maxZ: 1 },
+                { name: "MANAGER OFFICE", minX: -15, maxX: -5, minZ: -10, maxZ: -1 },
+                { name: "MEETING ROOMS", minX: 5, maxX: 15, minZ: -10, maxZ: -1 },
+                { name: "PANTRY & BREAK AREA", minX: 5, maxX: 15, minZ: 2, maxZ: 10 },
+                { name: "HR, FINANCE & IT", minX: -15, maxX: -5, minZ: 2, maxZ: 10 }
             );
 
             // --- MAIN CONTROLLABLE AGENT (HUMAN AVATAR) ---
             const agentGroup = new THREE.Group();
 
-            // Head
-            const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), materials.agentHead);
-            headMesh.position.y = 1.55;
+            const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), materials.agentHead);
+            headMesh.position.y = 1.52;
             headMesh.castShadow = true;
             agentGroup.add(headMesh);
 
-            // Body / Torso
-            const torsoMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 0.7, 12), materials.agentBody);
-            torsoMesh.position.y = 1.0;
+            const torsoMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.68, 12), materials.agentBody);
+            torsoMesh.position.y = 0.98;
             torsoMesh.castShadow = true;
             agentGroup.add(torsoMesh);
 
-            // Legs
-            const legLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.65, 0.12), materials.metalBlack);
-            legLeft.position.set(-0.1, 0.325, 0);
-            agentGroup.add(legLeft);
+            const legL = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.62, 0.11), materials.metalDark);
+            legL.position.set(-0.09, 0.31, 0);
+            const legR = legL.clone();
+            legR.position.set(0.09, 0.31, 0);
+            agentGroup.add(legL, legR);
 
-            const legRight = legLeft.clone();
-            legRight.position.set(0.1, 0.325, 0);
-            agentGroup.add(legRight);
-
-            // "YOU" Indicator Above Head
-            const indicatorGeo = new THREE.ConeGeometry(0.12, 0.25, 4);
+            // "YOU" Selection Indicator
+            const indicatorGeo = new THREE.ConeGeometry(0.12, 0.22, 4);
             const indicatorMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
             const indicator = new THREE.Mesh(indicatorGeo, indicatorMat);
             indicator.rotation.x = Math.PI;
-            indicator.position.y = 2.0;
+            indicator.position.y = 1.95;
             agentGroup.add(indicator);
 
-            // Set Starting Position at Reception
-            agentGroup.position.set(0, 0, 7.5);
+            // Start Position at Open Office / Lobby Threshold
+            agentGroup.position.set(0, 0, 2.5);
             scene.add(agentGroup);
 
-            // --- WASD NAVIGATION & CAMERA TRACKING LOGIC ---
+            // --- NAVIGATION & DUAL CAMERA MODES ---
             const keysPressed = {};
             const moveSpeed = 0.12;
 
@@ -398,10 +437,10 @@ def virtual_office_3d():
                 keysPressed[e.key.toLowerCase()] = false;
             });
 
-            // Camera Modes: 0 = Third Person Follow, 1 = Close Third Person, 2 = Free Orbit
+            // Camera Mode: 0 = Architectural Cutaway View, 1 = Third Person Agent Follow
             let cameraMode = 0;
             function toggleCameraMode() {
-                cameraMode = (cameraMode + 1) % 3;
+                cameraMode = (cameraMode + 1) % 2;
             }
 
             function checkCollision(newX, newZ) {
@@ -409,7 +448,7 @@ def virtual_office_3d():
                 for (let box of collisionBoxes) {
                     if (newX + radius > box.minX && newX - radius < box.maxX &&
                         newZ + radius > box.minZ && newZ - radius < box.maxZ) {
-                        return true; // Collision detected
+                        return true;
                     }
                 }
                 return false;
@@ -428,7 +467,6 @@ def virtual_office_3d():
                     const newX = agentGroup.position.x + dx;
                     const newZ = agentGroup.position.z + dz;
 
-                    // Check boundaries & collisions
                     if (Math.abs(newX) < officeWidth / 2 - 0.5 && !checkCollision(newX, agentGroup.position.z)) {
                         agentGroup.position.x = newX;
                     }
@@ -436,29 +474,22 @@ def virtual_office_3d():
                         agentGroup.position.z = newZ;
                     }
 
-                    // Rotate agent facing direction
-                    const targetAngle = Math.atan2(dx, dz);
-                    agentGroup.rotation.y = targetAngle;
-
-                    // Idle bobbing / walk animation
-                    indicator.position.y = 2.0 + Math.sin(Date.now() * 0.01) * 0.05;
+                    agentGroup.rotation.y = Math.atan2(dx, dz);
+                    indicator.position.y = 1.95 + Math.sin(Date.now() * 0.01) * 0.04;
                 }
 
-                // Update Controls Target to Agent
-                controls.target.copy(agentGroup.position).add(new THREE.Vector3(0, 1.2, 0));
-
+                // Camera Logic
                 if (cameraMode === 0) {
-                    // Third Person Follow
-                    const offset = new THREE.Vector3(0, 4, 6);
-                    camera.position.lerp(agentGroup.position.clone().add(offset), 0.08);
-                } else if (cameraMode === 1) {
-                    // Close Third Person
-                    const offset = new THREE.Vector3(0, 2.2, 3.2);
-                    camera.position.lerp(agentGroup.position.clone().add(offset), 0.08);
+                    // Architectural Cutaway Mode (Fixed Center Orbit)
+                    controls.target.lerp(new THREE.Vector3(0, 0, 0), 0.05);
+                } else {
+                    // Agent View Mode (Follows Agent)
+                    controls.target.lerp(agentGroup.position.clone().add(new THREE.Vector3(0, 1.2, 0)), 0.08);
+                    const targetCamPos = agentGroup.position.clone().add(new THREE.Vector3(0, 3.5, 5.0));
+                    camera.position.lerp(targetCamPos, 0.05);
                 }
-                // Mode 2 = Free Orbit (Camera handled strictly by OrbitControls)
 
-                // Check Current Room Label
+                // Update Room Label UI
                 let currentRoom = "CORRIDOR";
                 for (let reg of roomRegions) {
                     if (agentGroup.position.x >= reg.minX && agentGroup.position.x <= reg.maxX &&
@@ -470,33 +501,31 @@ def virtual_office_3d():
                 document.getElementById('current-room-text').innerText = "Lokasi: " + currentRoom;
             }
 
-            // --- MINI MAP RENDERER ---
+            // --- MINI MAP DRAWING ---
             const minimapCanvas = document.getElementById('minimap');
             const mmCtx = minimapCanvas.getContext('2d');
 
             function drawMiniMap() {
                 mmCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
-                
-                // Map Scale
                 const scaleX = minimapCanvas.width / officeWidth;
                 const scaleY = minimapCanvas.height / officeDepth;
 
-                // Draw Outer Boundary
-                mmCtx.strokeStyle = "#334155";
-                mmCtx.lineWidth = 2;
+                // Frame
+                mmCtx.strokeStyle = "#475569";
+                mmCtx.lineWidth = 1.5;
                 mmCtx.strokeRect(0, 0, minimapCanvas.width, minimapCanvas.height);
 
-                // Draw Agent Marker
-                const mmAgentX = (agentGroup.position.x + officeWidth / 2) * scaleX;
-                const mmAgentY = (agentGroup.position.z + officeDepth / 2) * scaleY;
+                // Agent Marker
+                const mmX = (agentGroup.position.x + officeWidth / 2) * scaleX;
+                const mmY = (agentGroup.position.z + officeDepth / 2) * scaleY;
 
                 mmCtx.fillStyle = "#10b981";
                 mmCtx.beginPath();
-                mmCtx.arc(mmAgentX, mmAgentY, 4, 0, Math.PI * 2);
+                mmCtx.arc(mmX, mmY, 3.5, 0, Math.PI * 2);
                 mmCtx.fill();
             }
 
-            // --- MAIN ANIMATION LOOP ---
+            // --- ANIMATION LOOP ---
             function animate() {
                 requestAnimationFrame(animate);
                 updateAgentMovement();
@@ -506,7 +535,7 @@ def virtual_office_3d():
             }
             animate();
 
-            // Resize Responsive Handler
+            // Window Resize Handler
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
