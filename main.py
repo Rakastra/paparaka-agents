@@ -1,22 +1,63 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import os
+import requests
 
-app = FastAPI()
+app = FastAPI(title="Paparaka AI Agent")
+
+# Model data untuk menerima input JSON
+class ChatRequest(BaseModel):
+    prompt: str
 
 @app.get("/")
 def home():
     return {"status": "AI Agent Running", "message": "Server Render Aktif!"}
 
-# Endpoint khusus agar server tidak "tidur" saat di-ping oleh UptimeRobot
+# Endpoint khusus untuk mencegah server sleep di Render (dipakai UptimeRobot)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
-# Contoh endpoint untuk memanggil AI (bisa disesuaikan nanti)
+# Endpoint utama untuk chat dengan Qwen via OpenRouter
 @app.post("/chat")
-def chat(prompt: str):
-    # Ambil API Key dari Environment Variable Render
-    api_key = os.getenv("GEMINI_API_KEY") 
+def chat(request: ChatRequest):
+    api_key = os.getenv("OPENROUTER_API_KEY")
     
-    # Logika AI Agent kamu ditulis di sini
-    return {"response": f"Agent memproses: {prompt}"}
+    if not api_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENROUTER_API_KEY belum dipasang di Environment Variables Render!"
+        )
+    
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": "qwen/qwen-3.8-27b-instruct:free",
+        "messages": [
+            {
+                "role": "system", 
+                "content": "Kamu adalah AI Agent serbaguna milik Paparaka. Jawablah dengan jelas, membantu, dan menggunakan bahasa Indonesia yang baik."
+            },
+            {
+                "role": "user", 
+                "content": request.prompt
+            }
+        ]
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        data = response.json()
+        
+        if response.status_code == 200:
+            ai_reply = data["choices"][0]["message"]["content"]
+            return {"status": "success", "response": ai_reply}
+        else:
+            return {"status": "error", "details": data}
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
