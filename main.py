@@ -78,7 +78,7 @@ def send_fonnte_message(target: str, text_message: str):
 async def whatsapp_webhook(request: Request):
     data_dict = {}
 
-    # 1. Coba ekstraksi dari Form Data (Multipart)
+    # 1. Parsing Form Data
     try:
         form_data = await request.form()
         for k, v in form_data.items():
@@ -86,14 +86,14 @@ async def whatsapp_webhook(request: Request):
     except Exception:
         pass
 
-    # 2. Fallback ke JSON
+    # 2. Parsing JSON
     if not data_dict:
         try:
             data_dict = await request.json()
         except Exception:
             pass
 
-    # 3. Fallback ke Raw Body String (URL-Encoded)
+    # 3. Parsing URL-Encoded Body
     if not data_dict:
         try:
             body_bytes = await request.body()
@@ -125,21 +125,19 @@ async def whatsapp_webhook(request: Request):
     if not message:
         return {"status": "ignored", "reason": "Pesan kosong"}
 
-    # Tentukan nomor/ID tujuan pengiriman balasan
-    # Jika group_id ada, gunakan group_id. Jika kosong, kirim ke sender atau grup default.
-    reply_target = group_id if group_id else (sender if sender else TARGET_GROUP_ID)
+    # Tujuan balasan: Ke ID grup jika ada, jika tidak ke pengirim/grup default
+    reply_target = (
+        group_id if group_id else (sender if sender else TARGET_GROUP_ID)
+    )
 
-    # Pengecekan kecocokan grup:
-    # Lolos jika ID grup cocok ATAU jika group_id kosong (pesan dipicu oleh kata kunci langsung)
-    is_group_valid = (
-        not group_id
-        or (TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID)
+    # Lolos validasi jika ID grup sesuai ATAU jika ID grup kosong
+    is_group_valid = not group_id or (
+        TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID
     )
 
     if is_group_valid:
         msg_lower = message.lower()
 
-        # Pemicu !rekap
         if msg_lower.startswith("!rekap"):
             system_prompt = (
                 "Kamu adalah AI Agent - Sup, admin rekapitulasi di grup"
@@ -152,7 +150,6 @@ async def whatsapp_webhook(request: Request):
             send_fonnte_message(reply_target, ai_reply)
             return {"status": "processed", "type": "rekap"}
 
-        # Pemicu !sup, !bot, !tanya
         elif any(msg_lower.startswith(trig) for trig in TRIGGERS):
             system_prompt = (
                 "Kamu adalah AI Agent - Sup, asisten cerdas di grup WhatsApp."
