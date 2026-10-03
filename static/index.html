@@ -5,80 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>3D Virtual Office</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      overflow: hidden;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #1a1a1a;
-      color: #ffffff;
-    }
-    #canvas-container {
-      width: 100vw;
-      height: 100vh;
-      display: block;
-    }
-    /* Loading Overlay */
-    #loading-screen {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(20, 20, 20, 0.95);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 99;
-      transition: opacity 0.5s ease;
-    }
-    .spinner {
-      width: 50px;
-      height: 50px;
-      border: 5px solid #333;
-      border-top: 5px solid #00adb5;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #loading-text {
-      font-size: 1.2rem;
-      color: #00adb5;
-    }
-    /* UI Panel Controls */
-    #ui-panel {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      background: rgba(30, 30, 30, 0.8);
-      backdrop-filter: blur(8px);
-      padding: 15px 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-      z-index: 10;
-      max-width: 300px;
-    }
-    #ui-panel h2 {
-      font-size: 1.1rem;
-      margin-bottom: 8px;
-      color: #00adb5;
-    }
-    #ui-panel p {
-      font-size: 0.85rem;
-      line-height: 1.4;
-      color: #ccc;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: #ffffff; }
+    #canvas-container { width: 100vw; height: 100vh; display: block; }
+    #loading-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(20, 20, 20, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 99; transition: opacity 0.5s ease; }
+    .spinner { width: 50px; height: 50px; border: 5px solid #333; border-top: 5px solid #00adb5; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #loading-text { font-size: 1.2rem; color: #00adb5; }
+    #ui-panel { position: absolute; top: 20px; left: 20px; background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(8px); padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 10; max-width: 300px; }
+    #ui-panel h2 { font-size: 1.1rem; margin-bottom: 8px; color: #00adb5; }
+    #ui-panel p { font-size: 0.85rem; line-height: 1.4; color: #ccc; }
   </style>
 
-  <!-- Import Maps Three.js ES Modules -->
   <script type="importmap">
     {
       "imports": {
@@ -109,13 +47,12 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-    // 1. Setup Scene, Camera, & Renderer
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1e1e24);
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(10, 8, 12);
+    camera.position.set(0, 8, 14);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -124,29 +61,22 @@
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
-    // 2. Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.maxPolarAngle = Math.PI / 2 - 0.01;
     controls.target.set(0, 1, 0);
 
-    // 3. Pencahayaan (Lighting)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(10, 15, 10);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
     scene.add(dirLight);
 
-    const pointLight = new THREE.PointLight(0xfff5ea, 1.5, 15);
-    pointLight.position.set(0, 4, 0);
-    scene.add(pointLight);
-
-    // 4. Lantai & Dinding Ruangan
+    // Floor & Room Construction
     const floorGeo = new THREE.PlaneGeometry(16, 16);
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x2c2c34, roughness: 0.8 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -159,46 +89,39 @@
     scene.add(gridHelper);
 
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x393e46, roughness: 0.9 });
-    
-    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(16, 6), wallMat);
-    backWall.position.set(0, 3, -8);
-    backWall.receiveShadow = true;
+    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(16, 8), wallMat);
+    backWall.position.set(0, 4, -8);
     scene.add(backWall);
 
-    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(16, 6), wallMat);
-    leftWall.position.set(-8, 3, 0);
+    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(16, 8), wallMat);
+    leftWall.position.set(-8, 4, 0);
     leftWall.rotation.y = Math.PI / 2;
-    leftWall.receiveShadow = true;
     scene.add(leftWall);
 
-    // 5. Daftar Model .GLB (Path mengarah ke /static/models/office/)
+    // Daftar File Aset (Nama disesuaikan dengan file di folder GitHub kamu)
     const officeAssets = [
-      { name: 'Desk.glb', pos: [0, 0, 0], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Office-Chair.glb', pos: [0, 0, 1.2], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Monitor.glb', pos: [-0.6, 0.75, -0.2], rot: [0, 0.2, 0], scale: [1, 1, 1] },
-      { name: 'Laptop-bag.glb', pos: [1.2, 0, 0.5], rot: [0, -0.5, 0], scale: [1, 1, 1] },
-      { name: 'Keyboard.glb', pos: [-0.3, 0.75, 0.3], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Mouse.glb', pos: [0.4, 0.75, 0.3], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Coffee-cup.glb', pos: [0.8, 0.75, -0.1], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Cabinet.glb', pos: [-5, 0, -7], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'File-Cabinet.glb', pos: [-3, 0, -7], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Medium-Book-Shelf.glb', pos: [5, 0, -7], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Printer.glb', pos: [-3, 1.1, -7], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Water-Cooler.glb', pos: [6.8, 0, -6], rot: [0, -Math.PI / 4, 0], scale: [1, 1, 1] },
-      { name: 'Potted-Plant.glb', pos: [-7, 0, -7], rot: [0, 0, 0], scale: [1.2, 1.2, 1.2] },
-      { name: 'Houseplant.glb', pos: [7, 0, 6], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Trashcan.glb', pos: [2, 0, 0], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Rug.glb', pos: [0, 0.01, 0], rot: [0, 0, 0], scale: [1.5, 1, 1.5] },
-      { name: 'Whiteboard.glb', pos: [0, 1.5, -7.8], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Analog-clock.glb', pos: [4, 4.5, -7.8], rot: [0, 0, 0], scale: [1, 1, 1] },
-      { name: 'Ceiling-Light.glb', pos: [0, 5.8, 0], rot: [0, 0, 0], scale: [1, 1, 1] }
+      { name: 'Table.glb', pos: [0, 0, 0], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Office Chair.glb', pos: [0, 0, 1.5], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Monitor.glb', pos: [0, 0.75, -0.2], rot: [0, 0, 0], scale: [0.8, 0.8, 0.8] },
+      { name: 'Keyboard.glb', pos: [0, 0.75, 0.4], rot: [0, 0, 0], scale: [0.8, 0.8, 0.8] },
+      { name: 'Mousepad.glb', pos: [0, 0.74, 0.2], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Mouse.glb', pos: [0.5, 0.75, 0.4], rot: [0, 0, 0], scale: [0.8, 0.8, 0.8] },
+      { name: 'Coffee cup.glb', pos: [-0.8, 0.75, 0.2], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Cabinet.glb', pos: [-5, 0, -6], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'File Cabinet.glb', pos: [-3, 0, -6], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Medium Book Shelf.glb', pos: [5, 0, -6], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Printer.glb', pos: [-3, 1.1, -6], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Water Cooler.glb', pos: [6.5, 0, -5], rot: [0, -Math.PI / 4, 0], scale: [1, 1, 1] },
+      { name: 'Potted Plant.glb', pos: [-6.5, 0, -6], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Trashcan.glb', pos: [2, 0, 0.5], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Rug.glb', pos: [0, 0.01, 0], rot: [0, 0, 0], scale: [1.8, 1, 1.8] },
+      { name: 'Whiteboard.glb', pos: [0, 2, -7.8], rot: [0, 0, 0], scale: [1, 1, 1] },
+      { name: 'Analog clock.glb', pos: [4, 5, -7.8], rot: [0, 0, 0], scale: [1, 1, 1] }
     ];
 
-    // 6. GLTF Loader
     const loader = new GLTFLoader();
     let loadedCount = 0;
     const totalAssets = officeAssets.length;
-
     const loadingText = document.getElementById('loading-text');
     const loadingScreen = document.getElementById('loading-screen');
 
@@ -206,7 +129,6 @@
       loadedCount++;
       const progress = Math.round((loadedCount / totalAssets) * 100);
       loadingText.innerText = `Memuat 3D Office... (${progress}%)`;
-      
       if (loadedCount === totalAssets) {
         setTimeout(() => {
           loadingScreen.style.opacity = '0';
@@ -216,7 +138,7 @@
     }
 
     officeAssets.forEach(asset => {
-      // Jalur file .glb disesuaikan dengan struktur Vercel /static/models/office/
+      // Mengarahkan langsung ke lokasi file di folder static/models/office/
       const fileUrl = `/static/models/office/${asset.name}`;
 
       loader.load(
@@ -239,20 +161,18 @@
         },
         undefined,
         (error) => {
-          console.warn(`File dilewati atau gagal dimuat: ${asset.name}`, error);
+          console.warn(`File tidak ditemukan atau dilewati: ${asset.name}`);
           updateProgress();
         }
       );
     });
 
-    // 7. Responsive Window Resize
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // 8. Animation Loop
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
