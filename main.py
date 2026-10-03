@@ -1,22 +1,3 @@
-Berdasarkan gambar referensi yang Anda berikan, tampilan tersebut adalah tampilan **3D Isometrik / Low-Poly 3D Office Space** (seperti pada platform *Gather.town*, *Sims*, atau *Topview Virtual Office*) lengkap dengan beberapa area (ruang rapat, meja kerja linier, lounge/breakroom, dan avatar AI dengan balon status).
-
-Untuk membuat tampilan **Full 3D dengan fitur kontrol kamera (rotasi, zoom, pan)** yang berjalan langsung di browser via FastAPI/Vercel, teknologi standar industri yang paling tepat digunakan adalah **Three.js** (dikombinasikan dengan **OrbitControls**).
-
----
-
-### Architecture & Framework 3D
-
-1. **Three.js (WebGL Engine)**: Untuk merender objek 3D (ruangan, lantai, meja, kursi, tanaman, dinding kaca) di browser secara *real-time*.
-2. **OrbitControls**: Memungkinkan kamera di-rotasi (drag klik kiri), di-pan/geser (klik kanan), dan di-zoom (scroll mouse).
-3. **HTML3D / Sprite Label**: Menampilkan status avatar AI dan chat bubble di atas karakter AI secara dinamis.
-
----
-
-### Kode Complete `main.py` (Full 3D Virtual Office)
-
-Berikut adalah kode lengkap `main.py` yang sudah mengintegrasikan halaman HTML 3D menggunakan Three.js. Ketika Anda membuka `/` atau `/office` di browser, Anda bisa **memutar kamera (rotasi 360°)**, **zoom in/out**, serta melihat ruangan kantor 3D lengkap dengan AI Agent - Sup di mejanya:
-
-```python
 import json
 import os
 import urllib.parse
@@ -24,6 +5,7 @@ import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 
+# TOP-LEVEL VARIABLE (Dibutuhkan oleh Vercel)
 app = FastAPI(title="AI Agent - Sup")
 
 TARGET_GROUP_ID = "120363387413264013@g.us"
@@ -45,19 +27,16 @@ def virtual_office_3d():
             body { margin: 0; overflow: hidden; background-color: #1a1a24; font-family: sans-serif; }
             #webgl-container { width: 100vw; height: 100vh; display: block; }
         </style>
-        <!-- Import Three.js dan OrbitControls dari CDN -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     </head>
     <body>
-
-        <!-- UI Overlay Control Panel -->
         <div class="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-700 text-white p-4 rounded-2xl shadow-2xl max-w-sm pointer-events-auto">
             <div class="flex items-center gap-3 mb-2">
                 <span class="text-2xl">🏢</span>
                 <div>
                     <h1 class="font-bold text-sm text-emerald-400">3D Virtual Office: AI Agent - Sup</h1>
-                    <p class="text-[11px] text-slate-400">Gunakan Mouse: Klik Kiri = Rotasi | Klik Kanan = Geser | Scroll = Zoom</p>
+                    <p class="text-[11px] text-slate-400">Mouse: Klik Kiri = Rotasi | Klik Kanan = Geser | Scroll = Zoom</p>
                 </div>
             </div>
             <div id="status-badge" class="mt-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-2">
@@ -66,7 +45,6 @@ def virtual_office_3d():
             </div>
         </div>
 
-        <!-- Testing Simulator Overlay -->
         <div class="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-2xl shadow-2xl max-w-md pointer-events-auto">
             <h2 class="text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">🧪 Testing Command Center</h2>
             <div class="flex gap-2">
@@ -77,47 +55,37 @@ def virtual_office_3d():
             </div>
         </div>
 
-        <!-- Canvas Container untuk Three.js -->
         <div id="webgl-container"></div>
 
         <script>
-            // --- THREE.JS SETUP ---
             const container = document.getElementById('webgl-container');
             const scene = new THREE.Scene();
             scene.background = new THREE.Color(0xdce5ed);
 
-            // Camera Setup (Isometrik 3D View)
             const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(25, 20, 25);
 
-            // Renderer Setup
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
-            // Orbit Controls (Rotasi, Zoom, Pan)
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2 - 0.05; // Mencegah kamera tembus ke bawah lantai
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
             controls.target.set(0, 2, 0);
 
-            // Lighting Setup
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
 
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
             dirLight.position.set(20, 40, 20);
             dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
             scene.add(dirLight);
 
-            // --- DEKORASI KANTOR 3D (PARQUET FLOOR, WALLS, FURNITURE) ---
-
-            // 1. Lantai Kayu Parquet
+            // Floor
             const floorGeo = new THREE.BoxGeometry(30, 0.4, 18);
             const floorMat = new THREE.MeshStandardMaterial({ color: 0xc49a6c, roughness: 0.4 });
             const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -125,7 +93,7 @@ def virtual_office_3d():
             floor.receiveShadow = true;
             scene.add(floor);
 
-            // Helper function pembuat dinding
+            // Walls
             function createWall(w, h, d, x, y, z, color = 0xeeeeee) {
                 const geo = new THREE.BoxGeometry(w, h, d);
                 const mat = new THREE.MeshStandardMaterial({ color: color });
@@ -135,21 +103,10 @@ def virtual_office_3d():
                 mesh.receiveShadow = true;
                 scene.add(mesh);
             }
-
-            // Dinding Belakang & Samping Left
             createWall(30, 6, 0.4, 0, 3, -9, 0x2c3e50);
             createWall(0.4, 6, 18, -15, 3, 0, 0x34495e);
 
-            // Dinding Kaca Ruang Rapat (Glass Partition)
-            const glassGeo = new THREE.BoxGeometry(0.2, 5.5, 8);
-            const glassMat = new THREE.MeshPhysicalMaterial({
-                color: 0xffffff, transparent: true, opacity: 0.3, roughness: 0.1, transmission: 0.9
-            });
-            const glassWall = new THREE.Mesh(glassGeo, glassMat);
-            glassWall.position.set(-7, 2.75, -5);
-            scene.add(glassWall);
-
-            // 2. Meja & Komputer AI Agent (Center Desk)
+            // Desk
             const deskGeo = new THREE.BoxGeometry(4, 1.2, 2.5);
             const deskMat = new THREE.MeshStandardMaterial({ color: 0x4a3525 });
             const desk = new THREE.Mesh(deskGeo, deskMat);
@@ -158,57 +115,26 @@ def virtual_office_3d():
             desk.receiveShadow = true;
             scene.add(desk);
 
-            // Laptop di atas meja
-            const laptopGeo = new THREE.BoxGeometry(0.8, 0.05, 0.6);
-            const laptopMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-            const laptop = new THREE.Mesh(laptopGeo, laptopMat);
-            laptop.position.set(0, 1.22, 0);
-            scene.add(laptop);
-
-            // 3. Avatar AI Agent - Sup (3D Character Mesh)
+            // Agent
             const agentGroup = new THREE.Group();
-            
-            // Kepala AI
             const headGeo = new THREE.SphereGeometry(0.4, 32, 32);
             const headMat = new THREE.MeshStandardMaterial({ color: 0x3498db });
             const head = new THREE.Mesh(headGeo, headMat);
             head.position.y = 2.1;
             agentGroup.add(head);
 
-            // Badan AI
             const bodyGeo = new THREE.CylinderGeometry(0.3, 0.4, 0.9, 16);
             const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71 });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
             body.position.y = 1.45;
             agentGroup.add(body);
 
-            agentGroup.position.set(0, 0, -1); // Duduk di belakang meja
+            agentGroup.position.set(0, 0, -1);
             scene.add(agentGroup);
 
-            // Tanaman Hias Pot (Decoration Plant)
-            function createPlant(x, z) {
-                const potGeo = new THREE.CylinderGeometry(0.5, 0.3, 0.8, 16);
-                const potMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-                const pot = new THREE.Mesh(potGeo, potMat);
-                pot.position.set(x, 0.4, z);
-
-                const plantGeo = new THREE.DodecahedronGeometry(0.7);
-                const plantMat = new THREE.MeshStandardMaterial({ color: 0x27ae60 });
-                const plant = new THREE.Mesh(plantGeo, plantMat);
-                plant.position.set(x, 1.1, z);
-
-                scene.add(pot);
-                scene.add(plant);
-            }
-            createPlant(-13, -7);
-            createPlant(13, -7);
-
-            // --- ANIMATION LOOP ---
             let isWorking = false;
             function animate() {
                 requestAnimationFrame(animate);
-
-                // Animasi idle berayun halus pada AI Agent
                 if (agentGroup) {
                     agentGroup.rotation.y = Math.sin(Date.now() * 0.002) * 0.15;
                     if (isWorking) {
@@ -217,20 +143,17 @@ def virtual_office_3d():
                         agentGroup.position.y = 0;
                     }
                 }
-
                 controls.update();
                 renderer.render(scene, camera);
             }
             animate();
 
-            // Resize Responsive
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
             });
 
-            // Trigger Simulasi Aktivitas 3D
             function trigger3dAction() {
                 const input = document.getElementById('test-input');
                 const val = input.value.trim();
@@ -240,7 +163,7 @@ def virtual_office_3d():
                 badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span><span>Agent Sup: Sedang Memproses Pesan...</span>`;
                 badge.className = "mt-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-2";
 
-                headMat.color.setHex(0xf39c12); // Mengubah warna kepala AI saat bekerja
+                headMat.color.setHex(0xf39c12);
                 isWorking = true;
                 input.value = '';
 
@@ -411,5 +334,3 @@ async def whatsapp_webhook(request: Request):
 
     print(f"[REJECTED] Group ID '{group_id}' atau pemicu tidak sesuai.")
     return {"status": "ignored", "reason": "Bukan pemicu atau grup berbeda"}
-
-```
