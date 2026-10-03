@@ -1,7 +1,8 @@
 import os
 import requests
-from typing import Optional
-from fastapi import FastAPI, Form, Request
+import urllib.parse
+import json
+from fastapi import FastAPI, Request
 
 app = FastAPI(title="AI Agent - Sup")
 
@@ -73,23 +74,47 @@ def send_fonnte_message(target: str, text_message: str):
 
 
 @app.post("/webhook/whatsapp")
-async def whatsapp_webhook(
-    sender: Optional[str] = Form(None),
-    message: Optional[str] = Form(None),
-    group: Optional[str] = Form(None),
-    target: Optional[str] = Form(None)
-):
-    sender_val = sender or ""
-    message_val = (message or "").strip()
-    group_id = group or target or ""
+async def whatsapp_webhook(request: Request):
+    data_dict = {}
 
-    print(f"[INCOMING PARSED] Sender: '{sender_val}' | Group: '{group_id}' | Msg: '{message_val}'")
+    # Ekstraksi manual dari multipart/form-data
+    try:
+        form = await request.form()
+        for k, v in form.items():
+            data_dict[k] = str(v)
+    except Exception as e:
+        print(f"[FORM ERROR] {e}")
 
-    if not message_val:
+    # Fallback ke JSON jika form kosong
+    if not data_dict:
+        try:
+            data_dict = await request.json()
+        except Exception:
+            pass
+
+    # Fallback ke Body String
+    if not data_dict:
+        try:
+            body_bytes = await request.body()
+            body_str = body_bytes.decode('utf-8', errors='ignore')
+            parsed = urllib.parse.parse_qs(body_str)
+            for k, v in parsed.items():
+                data_dict[k] = v[0] if isinstance(v, list) and v else str(v)
+        except Exception as e:
+            print(f"[BODY ERROR] {e}")
+
+    sender = str(data_dict.get("sender") or data_dict.get("from") or "")
+    message = str(data_dict.get("message") or data_dict.get("text") or "").strip()
+    group_id = str(data_dict.get("group") or data_dict.get("target") or data_dict.get("group_id") or "")
+
+    print(f"[ALL DATA] {data_dict}")
+    print(f"[INCOMING PARSED] Sender: '{sender}' | Group: '{group_id}' | Msg: '{message}'")
+
+    if not message:
         return {"status": "ignored", "reason": "Pesan kosong"}
 
     if TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID:
-        msg_lower = message_val.lower()
+        msg_lower = message.lower()
         
         if msg_lower.startswith("!rekap"):
             system_prompt = (
@@ -97,16 +122,16 @@ async def whatsapp_webhook(
                 "Tugasmu adalah menganalisis teks daftar pesanan/data dari anggota grup, lalu menyusun "
                 "rekapannya dengan rapi dan ringkas. Gunakan bahasa Indonesia yang santai dan profesional."
             )
-            ai_reply = ask_openrouter(message_val, system_prompt)
+            ai_reply = ask_openrouter(message, system_prompt)
             send_fonnte_message(group_id, ai_reply)
             return {"status": "processed", "type": "rekap"}
 
         elif any(msg_lower.startswith(trig) for trig in TRIGGERS):
             system_prompt = (
-                "Kamu meupakan AI Agent - Sup, asisten cerdas di grup WhatsApp. "
+                "Kamu adalah AI Agent - Sup, asisten cerdas di grup WhatsApp. "
                 "Bantu jawab pertanyaan anggota grup secara singkat, ramah, dan jelas."
             )
-            ai_reply = ask_openrouter(message_val, system_prompt)
+            ai_reply = ask_openrouter(message, system_prompt)
             send_fonnte_message(group_id, ai_reply)
             return {"status": "processed", "type": "chat"}
 
