@@ -36,7 +36,7 @@ def chat(request: ChatRequest):
     }
     
     payload = {
-        "model": "qwen/qwen-3.8-27b-instruct:free",
+        "model": "qwen/qwen-2.5-coder-32b-instruct:free",
         "messages": [
             {
                 "role": "system", 
