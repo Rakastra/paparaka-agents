@@ -1,98 +1,28 @@
-import os
-import requests
-from fastapi import FastAPI, Request
-
-app = FastAPI(title="AI Agent - Sup")
-
-TARGET_GROUP_ID = "120363387413264013@g.us"
-TRIGGERS = ["!rekap", "!bot", "!tanya", "!sup"]
-
-
-@app.get("/")
-def home():
-    return {"status": "AI Agent Running", "message": "Server Vercel Aktif!"}
-
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
-
-
-def ask_openrouter(user_message: str, system_prompt: str) -> str:
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    if not api_key:
-        print("[ERROR] OPENROUTER_API_KEY tidak ditemukan!")
-        return "Error: API Key OpenRouter belum terpasang."
-
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "openrouter/free",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
-    }
-
-    try:
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        data = response.json()
-        if response.status_code == 200:
-            return data["choices"][0]["message"]["content"]
-        else:
-            error_msg = data.get("error", {}).get("message", "Kesalahan API")
-            return f"Maaf, AI mengalami kendala: {error_msg}"
-    except Exception as e:
-        return f"Error koneksi ke OpenRouter: {str(e)}"
-
-
-def send_fonnte_message(target: str, text_message: str):
-    fonnte_token = os.getenv("FONNTE_TOKEN")
-    if not fonnte_token:
-        print("[ERROR] FONNTE_TOKEN tidak ditemukan!")
-        return
-
-    fonnte_url = "https://api.fonnte.com/send"
-    payload = {
-        "target": target,
-        "message": text_message
-    }
-    headers = {
-        "Authorization": fonnte_token
-    }
-    
-    try:
-        res = requests.post(fonnte_url, data=payload, headers=headers, timeout=15)
-        print("[FONNTE RESPONSE]", res.text)
-    except Exception as e:
-        print("[FONNTE SEND ERROR]", str(e))
-
-
 @app.post("/webhook/whatsapp")
 async def whatsapp_webhook(request: Request):
+    # Coba baca data sebagai JSON dulu
     try:
-        # Mencoba membaca data sebagai form
-        data = await request.form()
-        data_dict = dict(data)
+        data_dict = await request.json()
     except Exception:
+        # Jika bukan JSON, baca sebagai Form Data
         try:
-            # Jika gagal, membaca data sebagai json
-            data_dict = await request.json()
+            form_data = await request.form()
+            data_dict = dict(form_data)
         except Exception:
             data_dict = {}
 
     sender = str(data_dict.get("sender", ""))
     message = str(data_dict.get("message", "")).strip()
-    group_id = str(data_dict.get("group") or data_dict.get("target") or "")
+    
+    # Fonnte bisa mengirim ID grup di 'group', 'target', atau 'from'
+    group_id = str(data_dict.get("group") or data_dict.get("target") or data_dict.get("from") or "")
 
-    print(f"[INCOMING] Sender: {sender} | Group: {group_id} | Msg: {message}")
+    print(f"[INCOMING] Sender: '{sender}' | Group: '{group_id}' | Msg: '{message}'")
 
     if not message:
         return {"status": "ignored", "reason": "Pesan kosong"}
 
+    # Pengecekan grup
     if TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID:
         msg_lower = message.lower()
         
