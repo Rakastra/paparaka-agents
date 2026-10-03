@@ -3,14 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Modern Officer Workstation</title>
+  <title>Office Room 3D</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { overflow: hidden; font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #0f1115; color: #ffffff; }
+    body { overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #111115; color: #ffffff; }
     #canvas-container { width: 100vw; height: 100vh; display: block; }
-    #ui-panel { position: absolute; top: 20px; left: 20px; background: rgba(22, 27, 34, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 16px 20px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 10; max-width: 280px; }
-    #ui-panel h2 { font-size: 1rem; margin-bottom: 8px; color: #00f2fe; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-    #ui-panel p { font-size: 0.8rem; line-height: 1.5; color: #a0aec0; }
+    
+    #loading-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: #0f1115; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; z-index: 100;
+      transition: opacity 0.5s ease;
+    }
+    .spinner {
+      width: 48px; height: 48px; border: 5px solid rgba(0, 173, 181, 0.2);
+      border-top-color: #00adb5; border-radius: 50%;
+      animation: spin 1s linear infinite; margin-bottom: 15px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-text { font-size: 0.95rem; color: #a0aec0; letter-spacing: 0.5px; }
+
+    #ui-panel {
+      position: absolute; top: 20px; left: 20px;
+      background: rgba(22, 27, 34, 0.8); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1); padding: 15px 20px;
+      border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 10;
+    }
+    #ui-panel h2 { font-size: 1rem; margin-bottom: 6px; color: #00adb5; }
+    #ui-panel p { font-size: 0.8rem; line-height: 1.4; color: #cbd5e0; }
   </style>
 
   <script type="importmap">
@@ -24,11 +44,16 @@
 </head>
 <body>
 
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-text">Memuat Model 3D Office & Character...</div>
+  </div>
+
   <div id="ui-panel">
-    <h2>💻 Modern Workstation</h2>
-    <p>• <b>Klik Kiri + Geser:</b> Putar Ruangan</p>
+    <h2>🏢 Office & Avatar 3D</h2>
+    <p>• <b>Klik Kiri + Geser:</b> Putar Tampilan</p>
     <p>• <b>Klik Kanan + Geser:</b> Geser Kamera</p>
-    <p>• <b>Scroll:</b> Zoom In / Out</p>
+    <p>• <b>Scroll:</b> Zoom</p>
   </div>
 
   <div id="canvas-container"></div>
@@ -36,14 +61,15 @@
   <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-    // 1. Scene & Setup
+    // 1. Scene, Camera, Renderer Setup
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f1115);
+    scene.background = new THREE.Color(0x111115);
 
-    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(5.5, 4.5, 7.5);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 8);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -51,199 +77,113 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.target.set(0, 1.1, 0);
+    controls.target.set(0, 1, 0);
 
-    // 2. Modern Studio Lighting Setup
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    // 2. Lighting Setup
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
 
-    // Main Sunlight
-    const dirLight = new THREE.DirectionalLight(0xfff5ea, 1.8);
-    dirLight.position.set(6, 9, 5);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+    dirLight.position.set(5, 10, 7);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.bias = -0.0001;
     scene.add(dirLight);
 
-    // Warm Accent Light (Top Right)
-    const warmLight = new THREE.PointLight(0xffaa55, 1.2, 8);
-    warmLight.position.set(-2.5, 3.5, -2);
-    scene.add(warmLight);
+    const fillLight = new THREE.PointLight(0x00adb5, 1.5, 10);
+    fillLight.position.set(-3, 3, -2);
+    scene.add(fillLight);
 
-    // Cool Cyan Backlight (Under desk & screen glow)
-    const cyanLight = new THREE.PointLight(0x00f2fe, 1.5, 5);
-    cyanLight.position.set(0, 1.4, -0.3);
-    scene.add(cyanLight);
+    // 3. Daftar File Model GLB yang akan dimuat
+    // Memastikan path fleksibel membaca dari folder relatif/lokal
+    const modelFiles = [
+      'models/office.glb',
+      'models/character.glb',
+      'models/avatar.glb',
+      'models/office_room.glb',
+      'models/desk.glb',
+      'models/chair.glb'
+    ];
 
-    // Helper Function
-    function createBox(w, h, d, color, x, y, z, rough=0.4, metal=0.1, rx=0, ry=0, rz=0) {
-      const geo = new THREE.BoxGeometry(w, h, d);
-      const mat = new THREE.MeshStandardMaterial({ color: color, roughness: rough, metalness: metal });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(x, y, z);
-      mesh.rotation.set(rx, ry, rz);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
-      return mesh;
+    const loadingManager = new THREE.LoadingManager();
+    const loader = new GLTFLoader(loadingManager);
+
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingText = document.getElementById('loading-text');
+
+    loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+      loadingText.innerText = `Memuat file model (${itemsLoaded}/${itemsTotal})...`;
+    };
+
+    loadingManager.onLoad = () => {
+      setTimeout(() => {
+        loadingOverlay.style.opacity = '0';
+        setTimeout(() => loadingOverlay.style.display = 'none', 500);
+      }, 300);
+    };
+
+    // Fungsi pembantu untuk memuat model dengan error handling safe
+    function loadModel(path) {
+      return new Promise((resolve) => {
+        loader.load(
+          path,
+          (gltf) => resolve({ status: 'success', gltf, path }),
+          undefined,
+          (error) => resolve({ status: 'error', error, path })
+        );
+      });
     }
 
-    // 3. RUANGAN MODERN & ESTETIK
-    // Lantai Parket Kayu Gelap
-    const floorGeo = new THREE.PlaneGeometry(7, 7);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x1a1d24, roughness: 0.3, metalness: 0.2 });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
+    // Load semua file secara paralel
+    let loadedCount = 0;
+    Promise.all(modelFiles.map(file => loadModel(file))).then(results => {
+      results.forEach(res => {
+        if (res.status === 'success') {
+          const model = res.gltf.scene;
+          
+          model.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
 
-    // Dinding Utama
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x212631, roughness: 0.8 });
-    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.5), wallMat);
-    backWall.position.set(0, 2.25, -3.5);
-    backWall.receiveShadow = true;
-    scene.add(backWall);
+          // Mengatur posisi khusus jika avatar terpisah
+          if (res.path.includes('character') || res.path.includes('avatar')) {
+            model.position.set(0, 0, 0.5); // Posisi duduk/berdiri di area kerja
+          }
 
-    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.5), wallMat);
-    leftWall.position.set(-3.5, 2.25, 0);
-    leftWall.rotation.y = Math.PI / 2;
-    leftWall.receiveShadow = true;
-    scene.add(leftWall);
+          scene.add(model);
+          loadedCount++;
+        }
+      });
 
-    // Panel Kayu Dinding Belakang (Aksen Modern)
-    for (let i = -1.5; i <= 1.5; i += 0.22) {
-      createBox(0.18, 3.2, 0.04, 0x8c6239, i, 2.0, -3.46, 0.6, 0.05);
-    }
+      // Jika file folder lokal tidak ketemu, muat model default dari CDN sebagai fallback
+      if (loadedCount === 0) {
+        loadingText.innerText = 'Memuat model office default dari CDN...';
+        loader.load(
+          'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/SheenChair/glTF-Binary/SheenChair.glb',
+          (gltf) => {
+            scene.add(gltf.scene);
+          }
+        );
+      }
+    });
 
-    // Karpet Aesthetic Minimalis
-    createBox(3.2, 0.015, 2.6, 0x2d3748, 0, 0.008, 0.2, 0.9, 0);
-
-    // 4. MEJA KERJA MODERN (Industrial Minimalist Desk)
-    // Daun Meja Kayu Walnut
-    createBox(2.2, 0.06, 1.1, 0xb07d4f, 0, 1.2, 0, 0.4, 0.1);
-    // Kaki Meja Besi Hitam Doff
-    createBox(0.06, 1.2, 1.0, 0x111318, -1.02, 0.6, 0, 0.2, 0.8);
-    createBox(0.06, 1.2, 1.0, 0x111318, 1.02, 0.6, 0, 0.2, 0.8);
-    createBox(2.1, 0.04, 0.06, 0x111318, 0, 0.25, -0.4, 0.2, 0.8); // Palang Bawah
-
-    // Laci Minimalis Gantung
-    createBox(0.55, 0.35, 0.8, 0x1a202c, 0.68, 0.98, 0, 0.5, 0.2);
-
-    // 5. PERANGKAT KERJA SETUP (Ultrawide Curved Monitor + Accessories)
-    // Stand Monitor
-    createBox(0.3, 0.015, 0.2, 0x222222, 0, 1.23, -0.25, 0.2, 0.9);
-    createBox(0.04, 0.38, 0.04, 0x222222, 0, 1.42, -0.25, 0.2, 0.9);
-    
-    // Monitor Ultrawide
-    createBox(1.5, 0.52, 0.04, 0x111111, 0, 1.68, -0.22, 0.3, 0.8);
-    // Screen Glow / Tampilan Layar Coding
-    const screenGeo = new THREE.PlaneGeometry(1.44, 0.46);
-    const screenMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe });
-    const screen = new THREE.Mesh(screenGeo, screenMat);
-    screen.position.set(0, 1.68, -0.19);
-    scene.add(screen);
-
-    // Deskmat / Deskpad
-    createBox(1.1, 0.008, 0.42, 0x1a202c, -0.05, 1.235, 0.2, 0.8, 0);
-
-    // Mechanical Keyboard
-    createBox(0.52, 0.025, 0.16, 0x2d3748, -0.15, 1.245, 0.2, 0.4, 0.3);
-    
-    // Mouse Wireless & Charging Dock
-    createBox(0.07, 0.025, 0.11, 0xedf2f7, 0.28, 1.245, 0.2, 0.2, 0.5);
-
-    // Gelas Kopi Ceramic
-    const cupGeo = new THREE.CylinderGeometry(0.045, 0.035, 0.11, 24);
-    const cupMat = new THREE.MeshStandardMaterial({ color: 0x2b6cb0, roughness: 0.2 });
-    const cup = new THREE.Mesh(cupGeo, cupMat);
-    cup.position.set(-0.75, 1.28, 0.15);
-    cup.castShadow = true;
-    scene.add(cup);
-
-    // Lampu Meja Bar LED (Monitor Lightbar)
-    createBox(0.8, 0.02, 0.03, 0x2d3748, 0, 1.95, -0.2, 0.3, 0.8);
-
-    // 6. KURSI KERJA ERGONOMIS MODERN
-    // Dudukan & Sandaran Mesh
-    createBox(0.62, 0.08, 0.58, 0x2d3748, 0, 0.72, 1.15, 0.5, 0.1);
-    createBox(0.56, 0.7, 0.06, 0x1a202c, 0, 1.12, 1.42, 0.5, 0.1);
-    // Frame Metal & Roda
-    createBox(0.06, 0.65, 0.06, 0xa0aec0, 0, 0.8, 1.45, 0.2, 0.9);
-    const stemGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.35, 16);
-    const stemMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8 });
-    const stem = new THREE.Mesh(stemGeo, stemMat);
-    stem.position.set(0, 0.5, 1.15);
-    scene.add(stem);
-    createBox(0.65, 0.04, 0.65, 0x111111, 0, 0.33, 1.15, 0.3, 0.8);
-
-    // 7. DEKORASI FOTO & HIASAN DINDING
-    // Frame Lukisan / Wall Art Abstract Modern
-    createBox(1.2, 1.5, 0.03, 0x1a202c, -2.2, 2.5, -3.46, 0.5, 0.1);
-    const artGeo = new THREE.PlaneGeometry(1.1, 1.4);
-    const artMat = new THREE.MeshBasicMaterial({ color: 0xdd6b20 });
-    const art = new THREE.Mesh(artGeo, artMat);
-    art.position.set(-2.2, 2.5, -3.44);
-    scene.add(art);
-
-    // Rak Buku Floating Modern (Sisi Kiri Dinding)
-    createBox(0.3, 0.04, 1.4, 0x8c6239, -3.4, 2.2, -1.0, 0.5, 0.1);
-    createBox(0.3, 0.04, 1.4, 0x8c6239, -3.4, 1.5, -1.0, 0.5, 0.1);
-
-    // Hiasan Buku & Pajangan di Rak
-    createBox(0.2, 0.22, 0.06, 0xe53e3e, -3.38, 2.33, -1.3, 0.5, 0);
-    createBox(0.2, 0.25, 0.06, 0x3182ce, -3.38, 2.35, -1.18, 0.5, 0);
-    createBox(0.2, 0.18, 0.06, 0x38a169, -3.38, 2.31, -1.08, 0.5, 0);
-
-    // Tanaman Hias Monsteria Modern (Potted Plant)
-    const potGeo = new THREE.CylinderGeometry(0.22, 0.16, 0.45, 24);
-    const potMat = new THREE.MeshStandardMaterial({ color: 0xf7fafc, roughness: 0.2 });
-    const pot = new THREE.Mesh(potGeo, potMat);
-    pot.position.set(2.5, 0.225, -2.3);
-    pot.castShadow = true;
-    scene.add(pot);
-
-    // Daun Tanaman
-    const plantGroup = new THREE.Group();
-    for (let i = 0; i < 5; i++) {
-      const leafGeo = new THREE.SphereGeometry(0.25, 8, 8);
-      leafGeo.scale(1, 0.1, 1.8);
-      const leafMat = new THREE.MeshStandardMaterial({ color: 0x276749, roughness: 0.4 });
-      const leaf = new THREE.Mesh(leafGeo, leafMat);
-      leaf.position.set(
-        Math.cos(i * 1.2) * 0.18,
-        0.5 + i * 0.08,
-        Math.sin(i * 1.2) * 0.18
-      );
-      leaf.rotation.set(Math.PI / 6, i * 1.2, Math.PI / 12);
-      leaf.castShadow = true;
-      plantGroup.add(leaf);
-    }
-    plantGroup.position.set(2.5, 0.2, -2.3);
-    scene.add(plantGroup);
-
-    // Tempat Sampah Modern Minimalis
-    const binGeo = new THREE.CylinderGeometry(0.16, 0.12, 0.38, 24);
-    const binMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, roughness: 0.5 });
-    const bin = new THREE.Mesh(binGeo, binMat);
-    bin.position.set(1.4, 0.19, 0.2);
-    bin.castShadow = true;
-    scene.add(bin);
-
-    // 8. Responsive Window Resize
+    // 4. Responsive Window Resize
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    // 9. Render Loop
+    // 5. Render Loop
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
