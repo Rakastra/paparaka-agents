@@ -1,15 +1,26 @@
+import urllib.parse
+import json
+
 @app.post("/webhook/whatsapp")
 async def whatsapp_webhook(request: Request):
-    # Coba baca data sebagai JSON dulu
-    try:
-        data_dict = await request.json()
-    except Exception:
-        # Jika bukan JSON, baca sebagai Form Data
+    data_dict = {}
+    
+    # 1. Ambil raw body dari request Fonnte
+    raw_body = await request.body()
+    body_str = raw_body.decode("utf-8", errors="ignore")
+    
+    # 2. Coba parse sebagai Form Data / URL-Encoded
+    parsed_form = urllib.parse.parse_qs(body_str)
+    if parsed_form:
+        for key, val in parsed_form.items():
+            data_dict[key] = val[0] if isinstance(val, list) and len(val) > 0 else str(val)
+    
+    # 3. Jika gagal parse form, coba parse sebagai JSON
+    if not data_dict and body_str:
         try:
-            form_data = await request.form()
-            data_dict = dict(form_data)
+            data_dict = json.loads(body_str)
         except Exception:
-            data_dict = {}
+            pass
 
     sender = str(data_dict.get("sender", ""))
     message = str(data_dict.get("message", "")).strip()
@@ -17,10 +28,11 @@ async def whatsapp_webhook(request: Request):
     # Fonnte bisa mengirim ID grup di 'group', 'target', atau 'from'
     group_id = str(data_dict.get("group") or data_dict.get("target") or data_dict.get("from") or "")
 
-    print(f"[INCOMING] Sender: '{sender}' | Group: '{group_id}' | Msg: '{message}'")
+    print(f"[INCOMING RAW] Body: {body_str}")
+    print(f"[INCOMING PARSED] Sender: '{sender}' | Group: '{group_id}' | Msg: '{message}'")
 
     if not message:
-        return {"status": "ignored", "reason": "Pesan kosong"}
+        return {"status": "ignored", "reason": "Pesan kosong atau gagal parse data"}
 
     # Pengecekan grup
     if TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID:
