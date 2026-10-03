@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Virtual Office - Interactive Viewer</title>
+  <title>3D Virtual Office</title>
   <style>
     * {
       box-sizing: border-box;
@@ -28,7 +28,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(20, 20, 20, 0.9);
+      background: rgba(20, 20, 20, 0.95);
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -53,12 +53,12 @@
       font-size: 1.2rem;
       color: #00adb5;
     }
-    /* Controls UI Overlay */
+    /* UI Panel Controls */
     #ui-panel {
       position: absolute;
       top: 20px;
       left: 20px;
-      background: rgba(30, 30, 30, 0.75);
+      background: rgba(30, 30, 30, 0.8);
       backdrop-filter: blur(8px);
       padding: 15px 20px;
       border-radius: 10px;
@@ -78,7 +78,7 @@
     }
   </style>
 
-  <!-- Import Maps for Three.js ES Modules -->
+  <!-- Import Maps Three.js ES Modules -->
   <script type="importmap">
     {
       "imports": {
@@ -92,14 +92,14 @@
 
   <div id="loading-screen">
     <div class="spinner"></div>
-    <div id="loading-text">Memuat Virtual Office 3D... (0%)</div>
+    <div id="loading-text">Memuat 3D Office... (0%)</div>
   </div>
 
   <div id="ui-panel">
     <h2>🏢 3D Virtual Office</h2>
     <p>• <b>Klik Kiri + Geser:</b> Putar Kamera</p>
     <p>• <b>Klik Kanan + Geser:</b> Geser Posisi (Pan)</p>
-    <p>• <b>Scroll:</b> Zoom In / Zoom Out</p>
+    <p>• <b>Scroll:</b> Zoom In / Out</p>
   </div>
 
   <div id="canvas-container"></div>
@@ -128,10 +128,10 @@
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2 - 0.01; // Cegah kamera menembus lantai
+    controls.maxPolarAngle = Math.PI / 2 - 0.01;
     controls.target.set(0, 1, 0);
 
-    // 3. Lighting Setup
+    // 3. Pencahayaan (Lighting)
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
@@ -140,16 +140,13 @@
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 50;
     scene.add(dirLight);
 
-    // Light dari langit-langit interior
     const pointLight = new THREE.PointLight(0xfff5ea, 1.5, 15);
     pointLight.position.set(0, 4, 0);
     scene.add(pointLight);
 
-    // 4. Buat Ruangan (Lantai & Dinding)
+    // 4. Lantai & Dinding Ruangan
     const floorGeo = new THREE.PlaneGeometry(16, 16);
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x2c2c34, roughness: 0.8 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -157,12 +154,10 @@
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // Grid Helper
     const gridHelper = new THREE.GridHelper(16, 16, 0x00adb5, 0x393e46);
     gridHelper.position.y = 0.01;
     scene.add(gridHelper);
 
-    // Dinding Belakang & Kiri
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x393e46, roughness: 0.9 });
     
     const backWall = new THREE.Mesh(new THREE.PlaneGeometry(16, 6), wallMat);
@@ -176,10 +171,8 @@
     leftWall.receiveShadow = true;
     scene.add(leftWall);
 
-    // 5. Daftar Aset GLB yang Akan Dimuat
-    // Catatan: Pastikan file diletakkan pada folder 'office/'
+    // 5. Daftar Model .GLB (Path mengarah ke /static/models/office/)
     const officeAssets = [
-      // Layout Meja Utama & Kursi
       { name: 'Desk.glb', pos: [0, 0, 0], rot: [0, 0, 0], scale: [1, 1, 1] },
       { name: 'Office-Chair.glb', pos: [0, 0, 1.2], rot: [0, 0, 0], scale: [1, 1, 1] },
       { name: 'Monitor.glb', pos: [-0.6, 0.75, -0.2], rot: [0, 0.2, 0], scale: [1, 1, 1] },
@@ -187,15 +180,11 @@
       { name: 'Keyboard.glb', pos: [-0.3, 0.75, 0.3], rot: [0, 0, 0], scale: [1, 1, 1] },
       { name: 'Mouse.glb', pos: [0.4, 0.75, 0.3], rot: [0, 0, 0], scale: [1, 1, 1] },
       { name: 'Coffee-cup.glb', pos: [0.8, 0.75, -0.1], rot: [0, 0, 0], scale: [1, 1, 1] },
-
-      // Perabot Penyimpanan Belakang
       { name: 'Cabinet.glb', pos: [-5, 0, -7], rot: [0, 0, 0], scale: [1, 1, 1] },
       { name: 'File-Cabinet.glb', pos: [-3, 0, -7], rot: [0, 0, 0], scale: [1, 1, 1] },
       { name: 'Medium-Book-Shelf.glb', pos: [5, 0, -7], rot: [0, 0, 0], scale: [1, 1, 1] },
       { name: 'Printer.glb', pos: [-3, 1.1, -7], rot: [0, 0, 0], scale: [1, 1, 1] },
       { name: 'Water-Cooler.glb', pos: [6.8, 0, -6], rot: [0, -Math.PI / 4, 0], scale: [1, 1, 1] },
-
-      // Dekorasi Ruangan & Tanaman
       { name: 'Potted-Plant.glb', pos: [-7, 0, -7], rot: [0, 0, 0], scale: [1.2, 1.2, 1.2] },
       { name: 'Houseplant.glb', pos: [7, 0, 6], rot: [0, 0, 0], scale: [1, 1, 1] },
       { name: 'Trashcan.glb', pos: [2, 0, 0], rot: [0, 0, 0], scale: [1, 1, 1] },
@@ -205,7 +194,7 @@
       { name: 'Ceiling-Light.glb', pos: [0, 5.8, 0], rot: [0, 0, 0], scale: [1, 1, 1] }
     ];
 
-    // 6. Asynchronous Loader untuk Mengunduh File GLB
+    // 6. GLTF Loader
     const loader = new GLTFLoader();
     let loadedCount = 0;
     const totalAssets = officeAssets.length;
@@ -216,7 +205,7 @@
     function updateProgress() {
       loadedCount++;
       const progress = Math.round((loadedCount / totalAssets) * 100);
-      loadingText.innerText = `Memuat Virtual Office 3D... (${progress}%)`;
+      loadingText.innerText = `Memuat 3D Office... (${progress}%)`;
       
       if (loadedCount === totalAssets) {
         setTimeout(() => {
@@ -227,8 +216,8 @@
     }
 
     officeAssets.forEach(asset => {
-      // Path disesuaikan dengan direktori folder office/
-      const fileUrl = `./office/${asset.name}`;
+      // Jalur file .glb disesuaikan dengan struktur Vercel /static/models/office/
+      const fileUrl = `/static/models/office/${asset.name}`;
 
       loader.load(
         fileUrl,
@@ -238,7 +227,6 @@
           model.rotation.set(...asset.rot);
           model.scale.set(...asset.scale);
 
-          // Aktifkan bayangan untuk seluruh mesh di dalam model GLB
           model.traverse((child) => {
             if (child.isMesh) {
               child.castShadow = true;
@@ -251,20 +239,18 @@
         },
         undefined,
         (error) => {
-          console.warn(`Gagal memuat aset: ${asset.name}. Menggunakan fallback/dilewati.`, error);
-          updateProgress(); // Tetap update progress agar UI tidak terhenti jika ada file tidak ditemukan
+          console.warn(`File dilewati atau gagal dimuat: ${asset.name}`, error);
+          updateProgress();
         }
       );
     });
 
-    // 7. Responsive Window Resizing
-    window.addEventListener('resize', onWindowResize, false);
-
-    function onWindowResize() {
+    // 7. Responsive Window Resize
+    window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-    }
+    });
 
     // 8. Animation Loop
     function animate() {
