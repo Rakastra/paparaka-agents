@@ -1,3 +1,22 @@
+Berdasarkan gambar referensi yang Anda berikan, tampilan tersebut adalah tampilan **3D Isometrik / Low-Poly 3D Office Space** (seperti pada platform *Gather.town*, *Sims*, atau *Topview Virtual Office*) lengkap dengan beberapa area (ruang rapat, meja kerja linier, lounge/breakroom, dan avatar AI dengan balon status).
+
+Untuk membuat tampilan **Full 3D dengan fitur kontrol kamera (rotasi, zoom, pan)** yang berjalan langsung di browser via FastAPI/Vercel, teknologi standar industri yang paling tepat digunakan adalah **Three.js** (dikombinasikan dengan **OrbitControls**).
+
+---
+
+### Architecture & Framework 3D
+
+1. **Three.js (WebGL Engine)**: Untuk merender objek 3D (ruangan, lantai, meja, kursi, tanaman, dinding kaca) di browser secara *real-time*.
+2. **OrbitControls**: Memungkinkan kamera di-rotasi (drag klik kiri), di-pan/geser (klik kanan), dan di-zoom (scroll mouse).
+3. **HTML3D / Sprite Label**: Menampilkan status avatar AI dan chat bubble di atas karakter AI secara dinamis.
+
+---
+
+### Kode Complete `main.py` (Full 3D Virtual Office)
+
+Berikut adalah kode lengkap `main.py` yang sudah mengintegrasikan halaman HTML 3D menggunakan Three.js. Ketika Anda membuka `/` atau `/office` di browser, Anda bisa **memutar kamera (rotasi 360°)**, **zoom in/out**, serta melihat ruangan kantor 3D lengkap dengan AI Agent - Sup di mejanya:
+
+```python
 import json
 import os
 import urllib.parse
@@ -13,190 +32,224 @@ TRIGGERS = ["!rekap", "!bot", "!tanya", "!sup"]
 
 @app.get("/", response_class=HTMLResponse)
 @app.get("/office", response_class=HTMLResponse)
-def virtual_office():
+def virtual_office_3d():
     html_content = """
     <!DOCTYPE html>
     <html lang="id">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Virtual Office - AI Agent - Sup</title>
+        <title>3D Virtual Office - AI Agent - Sup</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: 'Plus Jakarta Sans', sans-serif; }
-            .office-floor {
-                background-color: #1e293b;
-                background-image:  radial-gradient(#334155 1px, transparent 1px), radial-gradient(#334155 1px, #1e293b 1px);
-                background-size: 40px 40px;
-                background-position: 0 0, 20px 20px;
-            }
-            @keyframes pulse-slow {
-                0%, 100% { transform: scale(1); opacity: 1; }
-                50% { transform: scale(1.03); opacity: 0.9; }
-            }
-            .working-agent { animation: pulse-slow 2s infinite ease-in-out; }
+            body { margin: 0; overflow: hidden; background-color: #1a1a24; font-family: sans-serif; }
+            #webgl-container { width: 100vw; height: 100vh; display: block; }
         </style>
+        <!-- Import Three.js dan OrbitControls dari CDN -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     </head>
-    <body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-8">
+    <body>
 
-        <div class="max-w-6xl mx-auto space-y-6">
-            
-            <!-- Header Kantor -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl gap-4">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-center text-2xl">
-                        🏢
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-bold text-white flex items-center gap-2">
-                            Ruang Kerja AI Agent - Sup
-                            <span class="text-xs font-normal bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2.5 py-0.5 rounded-full">v1.0 Online</span>
-                        </h1>
-                        <p class="text-xs text-slate-400">Virtual Office & Real-time Command Center (Vercel Serverless)</p>
-                    </div>
-                </div>
-                <div class="flex gap-3 text-xs font-medium">
-                    <div class="bg-slate-800 border border-slate-700 px-3 py-2 rounded-xl flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                        <span>Fonnte Webhook Active</span>
-                    </div>
-                    <div class="bg-slate-800 border border-slate-700 px-3 py-2 rounded-xl flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                        <span>OpenRouter Engine</span>
-                    </div>
+        <!-- UI Overlay Control Panel -->
+        <div class="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-700 text-white p-4 rounded-2xl shadow-2xl max-w-sm pointer-events-auto">
+            <div class="flex items-center gap-3 mb-2">
+                <span class="text-2xl">🏢</span>
+                <div>
+                    <h1 class="font-bold text-sm text-emerald-400">3D Virtual Office: AI Agent - Sup</h1>
+                    <p class="text-[11px] text-slate-400">Gunakan Mouse: Klik Kiri = Rotasi | Klik Kanan = Geser | Scroll = Zoom</p>
                 </div>
             </div>
-
-            <!-- RUANG KANTOR VIRTUAL (VISUAL FLOOR PLAN) -->
-            <div class="office-floor border-2 border-slate-800 rounded-3xl p-6 md:p-10 relative min-h-[420px] shadow-2xl overflow-hidden flex flex-col justify-between">
-                
-                <!-- Dinding Atas / Papan Tulis & Rak File -->
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                    <!-- Papan Tulis / Rules -->
-                    <div class="bg-slate-900/90 backdrop-blur border border-slate-700/80 p-4 rounded-2xl shadow-lg hover:border-emerald-500/50 transition cursor-pointer" onclick="alert('Trigger Pemicu Aktif:\\n!rekap\\n!sup\\n!tanya\\n!bot')">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">📋 Papan Instruksi</span>
-                            <span class="text-xs text-emerald-400 font-mono">TRIGGERS</span>
-                        </div>
-                        <p class="text-xs text-slate-300 font-mono">Pemicu: !rekap, !sup, !tanya, !bot</p>
-                        <p class="text-[11px] text-slate-500 mt-1">Status: Siap memproses pesan grup</p>
-                    </div>
-
-                    <!-- Rak Arsip Rekap -->
-                    <div class="bg-slate-900/90 backdrop-blur border border-slate-700/80 p-4 rounded-2xl shadow-lg hover:border-blue-500/50 transition cursor-pointer">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">📁 Rak Dokumen</span>
-                            <span class="text-xs text-blue-400 font-mono">REKAP</span>
-                        </div>
-                        <p class="text-xs text-slate-300 font-mono">Format: Laporan Formal</p>
-                        <p class="text-[11px] text-slate-500 mt-1">Otomatisasi pengelompokan kategori</p>
-                    </div>
-
-                    <!-- Area Breakroom -->
-                    <div class="hidden md:block bg-slate-900/90 backdrop-blur border border-slate-700/80 p-4 rounded-2xl shadow-lg">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">☕ Coffee Station</span>
-                            <span class="text-xs text-amber-400 font-mono">READY</span>
-                        </div>
-                        <p class="text-xs text-slate-300">Sistem berjalan 24/7 tanpa henti.</p>
-                    </div>
-                </div>
-
-                <!-- TAMPILAN MEJA KERJA UTAMA AI AGENT -->
-                <div class="flex justify-center my-4">
-                    <div class="relative bg-slate-900/95 border-2 border-slate-700 rounded-3xl p-6 md:p-8 w-full max-w-lg shadow-2xl text-center working-agent">
-                        <!-- Indikator Lampu Kerja -->
-                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 px-4 py-1 rounded-full flex items-center gap-2 text-xs">
-                            <span id="agent-status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                            <span id="agent-status-text" class="font-semibold text-emerald-400">Agent Sup: Standby di Meja</span>
-                        </div>
-
-                        <!-- Avatar & Computer Setup -->
-                        <div class="mt-2 flex justify-center items-center gap-6">
-                            <div class="text-6xl select-none filter drop-shadow-lg">
-                                🤖
-                            </div>
-                            <div class="text-left">
-                                <div class="text-3xl select-none mb-1">💻</div>
-                                <h2 class="text-lg font-bold text-white">AI Agent - Sup</h2>
-                                <p class="text-xs text-slate-400">Main Processor: OpenRouter LLM</p>
-                            </div>
-                        </div>
-
-                        <!-- Meja Surface -->
-                        <div class="mt-4 pt-4 border-t border-slate-800 flex justify-around text-xs text-slate-400">
-                            <span>📝 Rekapitulasi Data</span>
-                            <span>•</span>
-                            <span>💬 Asisten Grup WA</span>
-                            <span>•</span>
-                            <span>📊 Laporan Formal</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Dinding Bawah / Live Monitor Console -->
-                <div class="mt-8 bg-slate-900/90 backdrop-blur border border-slate-800 p-4 rounded-2xl">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            Monitor Aktivitas Kantor
-                        </span>
-                        <span class="text-[11px] text-slate-500 font-mono">Live Webhook Log</span>
-                    </div>
-                    <div id="office-log" class="font-mono text-xs text-slate-300 bg-slate-950 p-3 rounded-xl h-24 overflow-y-auto space-y-1 border border-slate-800/80">
-                        <div class="text-slate-500">[SYSTEM]: Ruang kerja AI Agent - Sup siap digunakan.</div>
-                        <div class="text-emerald-400">[SYSTEM]: Menunggu pesan WhatsApp dari grup...</div>
-                    </div>
-                </div>
-
+            <div id="status-badge" class="mt-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Agent Sup: Standby di Meja Utama</span>
             </div>
-
-            <!-- SIMULATOR PENGUJIAN PESAN KANTOR -->
-            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
-                <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                    🧪 Testing Console (Simulasi Pesan WhatsApp)
-                </h3>
-                <div class="flex gap-3">
-                    <input id="test-msg" type="text" placeholder="Masukkan contoh pesan (misal: !rekap Nasi Goreng 2 porsi Rp 30000)..." class="flex-1 bg-slate-950 border border-slate-800 px-4 py-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500">
-                    <button onclick="simulateOfficeMessage()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-xs font-semibold transition">
-                        Kirim ke Meja Agent
-                    </button>
-                </div>
-            </div>
-
         </div>
 
+        <!-- Testing Simulator Overlay -->
+        <div class="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-700 p-4 rounded-2xl shadow-2xl max-w-md pointer-events-auto">
+            <h2 class="text-xs font-bold text-slate-300 mb-2 uppercase tracking-wider">🧪 Testing Command Center</h2>
+            <div class="flex gap-2">
+                <input id="test-input" type="text" placeholder="Tes pesan (misal: !rekap Nasi Goreng 2)..." class="flex-1 bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500">
+                <button onclick="trigger3dAction()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition">
+                    Kirim
+                </button>
+            </div>
+        </div>
+
+        <!-- Canvas Container untuk Three.js -->
+        <div id="webgl-container"></div>
+
         <script>
-            function simulateOfficeMessage() {
-                const input = document.getElementById('test-msg');
-                const log = document.getElementById('office-log');
-                const statusText = document.getElementById('agent-status-text');
-                const statusDot = document.getElementById('agent-status-dot');
-                
+            // --- THREE.JS SETUP ---
+            const container = document.getElementById('webgl-container');
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xdce5ed);
+
+            // Camera Setup (Isometrik 3D View)
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(25, 20, 25);
+
+            // Renderer Setup
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Orbit Controls (Rotasi, Zoom, Pan)
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05; // Mencegah kamera tembus ke bawah lantai
+            controls.target.set(0, 2, 0);
+
+            // Lighting Setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(20, 40, 20);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
+
+            // --- DEKORASI KANTOR 3D (PARQUET FLOOR, WALLS, FURNITURE) ---
+
+            // 1. Lantai Kayu Parquet
+            const floorGeo = new THREE.BoxGeometry(30, 0.4, 18);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0xc49a6c, roughness: 0.4 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.position.y = -0.2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Helper function pembuat dinding
+            function createWall(w, h, d, x, y, z, color = 0xeeeeee) {
+                const geo = new THREE.BoxGeometry(w, h, d);
+                const mat = new THREE.MeshStandardMaterial({ color: color });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(x, y, z);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+            }
+
+            // Dinding Belakang & Samping Left
+            createWall(30, 6, 0.4, 0, 3, -9, 0x2c3e50);
+            createWall(0.4, 6, 18, -15, 3, 0, 0x34495e);
+
+            // Dinding Kaca Ruang Rapat (Glass Partition)
+            const glassGeo = new THREE.BoxGeometry(0.2, 5.5, 8);
+            const glassMat = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff, transparent: true, opacity: 0.3, roughness: 0.1, transmission: 0.9
+            });
+            const glassWall = new THREE.Mesh(glassGeo, glassMat);
+            glassWall.position.set(-7, 2.75, -5);
+            scene.add(glassWall);
+
+            // 2. Meja & Komputer AI Agent (Center Desk)
+            const deskGeo = new THREE.BoxGeometry(4, 1.2, 2.5);
+            const deskMat = new THREE.MeshStandardMaterial({ color: 0x4a3525 });
+            const desk = new THREE.Mesh(deskGeo, deskMat);
+            desk.position.set(0, 0.6, 0);
+            desk.castShadow = true;
+            desk.receiveShadow = true;
+            scene.add(desk);
+
+            // Laptop di atas meja
+            const laptopGeo = new THREE.BoxGeometry(0.8, 0.05, 0.6);
+            const laptopMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            const laptop = new THREE.Mesh(laptopGeo, laptopMat);
+            laptop.position.set(0, 1.22, 0);
+            scene.add(laptop);
+
+            // 3. Avatar AI Agent - Sup (3D Character Mesh)
+            const agentGroup = new THREE.Group();
+            
+            // Kepala AI
+            const headGeo = new THREE.SphereGeometry(0.4, 32, 32);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0x3498db });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 2.1;
+            agentGroup.add(head);
+
+            // Badan AI
+            const bodyGeo = new THREE.CylinderGeometry(0.3, 0.4, 0.9, 16);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2ecc71 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 1.45;
+            agentGroup.add(body);
+
+            agentGroup.position.set(0, 0, -1); // Duduk di belakang meja
+            scene.add(agentGroup);
+
+            // Tanaman Hias Pot (Decoration Plant)
+            function createPlant(x, z) {
+                const potGeo = new THREE.CylinderGeometry(0.5, 0.3, 0.8, 16);
+                const potMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                const pot = new THREE.Mesh(potGeo, potMat);
+                pot.position.set(x, 0.4, z);
+
+                const plantGeo = new THREE.DodecahedronGeometry(0.7);
+                const plantMat = new THREE.MeshStandardMaterial({ color: 0x27ae60 });
+                const plant = new THREE.Mesh(plantGeo, plantMat);
+                plant.position.set(x, 1.1, z);
+
+                scene.add(pot);
+                scene.add(plant);
+            }
+            createPlant(-13, -7);
+            createPlant(13, -7);
+
+            // --- ANIMATION LOOP ---
+            let isWorking = false;
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Animasi idle berayun halus pada AI Agent
+                if (agentGroup) {
+                    agentGroup.rotation.y = Math.sin(Date.now() * 0.002) * 0.15;
+                    if (isWorking) {
+                        agentGroup.position.y = Math.sin(Date.now() * 0.01) * 0.1;
+                    } else {
+                        agentGroup.position.y = 0;
+                    }
+                }
+
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Resize Responsive
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Trigger Simulasi Aktivitas 3D
+            function trigger3dAction() {
+                const input = document.getElementById('test-input');
                 const val = input.value.trim();
                 if (!val) return;
 
-                // Log Input
-                log.innerHTML += `<div class="text-blue-400">[WA INPUT]: ${val}</div>`;
+                const badge = document.getElementById('status-badge');
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span><span>Agent Sup: Sedang Memproses Pesan...</span>`;
+                badge.className = "mt-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-2";
+
+                headMat.color.setHex(0xf39c12); // Mengubah warna kepala AI saat bekerja
+                isWorking = true;
                 input.value = '';
 
-                // Set Agent Status Bekerja
-                statusText.innerText = "Agent Sup: Sedang Memproses Data...";
-                statusText.className = "font-semibold text-amber-400";
-                statusDot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping";
-
-                log.innerHTML += `<div class="text-amber-400">[AGENT]: Memproses respons melalui OpenRouter API...</div>`;
-                log.scrollTop = log.scrollHeight;
-
-                // Reset Status
                 setTimeout(() => {
-                    statusText.innerText = "Agent Sup: Standby di Meja";
-                    statusText.className = "font-semibold text-emerald-400";
-                    statusDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
-                    log.innerHTML += `<div class="text-emerald-400">[AGENT]: Balasan berhasil dikirim ke target!</div>`;
-                    log.scrollTop = log.scrollHeight;
-                }, 1500);
+                    badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>Agent Sup: Standby di Meja Utama</span>`;
+                    badge.className = "mt-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-2";
+                    headMat.color.setHex(0x3498db);
+                    isWorking = false;
+                }, 2000);
             }
         </script>
     </body>
@@ -358,3 +411,5 @@ async def whatsapp_webhook(request: Request):
 
     print(f"[REJECTED] Group ID '{group_id}' atau pemicu tidak sesuai.")
     return {"status": "ignored", "reason": "Bukan pemicu atau grup berbeda"}
+
+```
