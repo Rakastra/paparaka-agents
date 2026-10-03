@@ -1,7 +1,8 @@
-import os
-import requests
-import urllib.parse
 import json
+import os
+import urllib.parse
+from typing import Optional
+import requests
 from fastapi import FastAPI, Request
 
 app = FastAPI(title="AI Agent - Sup")
@@ -29,14 +30,14 @@ def ask_openrouter(user_message: str, system_prompt: str) -> str:
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
     }
     payload = {
         "model": "openrouter/free",
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
+            {"role": "user", "content": user_message},
+        ],
     }
 
     try:
@@ -45,29 +46,30 @@ def ask_openrouter(user_message: str, system_prompt: str) -> str:
         if response.status_code == 200:
             return data["choices"][0]["message"]["content"]
         else:
-            error_msg = data.get("error", {}).get("message", "Kesalahan API")
+            error_msg = data.get("error", {}).get(
+                "message", "Kesalahan API OpenRouter"
+            )
+            print(f"[OPENROUTER ERROR] {data}")
             return f"Maaf, AI mengalami kendala: {error_msg}"
     except Exception as e:
+        print(f"[OPENROUTER EXCEPTION] {str(e)}")
         return f"Error koneksi ke OpenRouter: {str(e)}"
 
 
 def send_fonnte_message(target: str, text_message: str):
     fonnte_token = os.getenv("FONNTE_TOKEN")
     if not fonnte_token:
-        print("[ERROR] FONNTE_TOKEN tidak ditemukan!")
+        print("[ERROR] FONNTE_TOKEN tidak ditemukan di Environment Variables!")
         return
 
     fonnte_url = "https://api.fonnte.com/send"
-    payload = {
-        "target": target,
-        "message": text_message
-    }
-    headers = {
-        "Authorization": fonnte_token
-    }
-    
+    payload = {"target": target, "message": text_message}
+    headers = {"Authorization": fonnte_token}
+
     try:
-        res = requests.post(fonnte_url, data=payload, headers=headers, timeout=15)
+        res = requests.post(
+            fonnte_url, data=payload, headers=headers, timeout=15
+        )
         print("[FONNTE RESPONSE]", res.text)
     except Exception as e:
         print("[FONNTE SEND ERROR]", str(e))
@@ -77,59 +79,83 @@ def send_fonnte_message(target: str, text_message: str):
 async def whatsapp_webhook(request: Request):
     data_dict = {}
 
-    # Ekstraksi manual dari multipart/form-data
+    # 1. Coba ekstraksi dari Form Data (Multipart)
     try:
-        form = await request.form()
-        for k, v in form.items():
+        form_data = await request.form()
+        for k, v in form_data.items():
             data_dict[k] = str(v)
-    except Exception as e:
-        print(f"[FORM ERROR] {e}")
+    except Exception:
+        pass
 
-    # Fallback ke JSON jika form kosong
+    # 2. Fallback ke JSON
     if not data_dict:
         try:
             data_dict = await request.json()
         except Exception:
             pass
 
-    # Fallback ke Body String
+    # 3. Fallback ke Raw Body String (URL-Encoded)
     if not data_dict:
         try:
             body_bytes = await request.body()
-            body_str = body_bytes.decode('utf-8', errors='ignore')
+            body_str = body_bytes.decode("utf-8", errors="ignore")
             parsed = urllib.parse.parse_qs(body_str)
             for k, v in parsed.items():
                 data_dict[k] = v[0] if isinstance(v, list) and v else str(v)
-        except Exception as e:
-            print(f"[BODY ERROR] {e}")
+        except Exception:
+            pass
 
     sender = str(data_dict.get("sender") or data_dict.get("from") or "")
-    message = str(data_dict.get("message") or data_dict.get("text") or "").strip()
-    group_id = str(data_dict.get("group") or data_dict.get("target") or data_dict.get("group_id") or "")
+    message = str(
+        data_dict.get("message") or data_dict.get("text") or ""
+    ).strip()
 
-    print(f"[ALL DATA] {data_dict}")
-    print(f"[INCOMING PARSED] Sender: '{sender}' | Group: '{group_id}' | Msg: '{message}'")
+    # Ekstraksi ID Grup dari berbagai parameter Fonnte yang mungkin
+    group_id = str(
+        data_dict.get("group")
+        or data_dict.get("target")
+        or data_dict.get("group_id")
+        or ""
+    )
+
+    print(f"[ALL DATA RECEIVED] {data_dict}")
+    print(
+        f"[INCOMING PARSED] Sender: '{sender}' | Group: '{group_id}' | Msg:"
+        f" '{message}'"
+    )
 
     if not message:
         return {"status": "ignored", "reason": "Pesan kosong"}
 
-    if TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID:
+    # Cek kecocokan grup target
+    is_target_group = (
+        (TARGET_GROUP_ID in group_id or group_id in TARGET_GROUP_ID)
+        if group_id
+        else False
+    )
+
+    if is_target_group:
         msg_lower = message.lower()
-        
+
+        # Pemicu !rekap
         if msg_lower.startswith("!rekap"):
             system_prompt = (
-                "Kamu adalah AI Agent - Sup, admin rekapitulasi di grup WhatsApp. "
-                "Tugasmu adalah menganalisis teks daftar pesanan/data dari anggota grup, lalu menyusun "
-                "rekapannya dengan rapi dan ringkas. Gunakan bahasa Indonesia yang santai dan profesional."
+                "Kamu adalah AI Agent - Sup, admin rekapitulasi di grup"
+                " WhatsApp. Tugasmu adalah menganalisis teks daftar"
+                " pesanan/data dari anggota grup, lalu menyusun rekapannya"
+                " dengan rapi dan ringkas. Gunakan bahasa Indonesia yang santai"
+                " dan profesional."
             )
             ai_reply = ask_openrouter(message, system_prompt)
             send_fonnte_message(group_id, ai_reply)
             return {"status": "processed", "type": "rekap"}
 
+        # Pemicu !sup, !bot, !tanya
         elif any(msg_lower.startswith(trig) for trig in TRIGGERS):
             system_prompt = (
-                "Kamu adalah AI Agent - Sup, asisten cerdas di grup WhatsApp. "
-                "Bantu jawab pertanyaan anggota grup secara singkat, ramah, dan jelas."
+                "Kamu adalah AI Agent - Sup, asisten cerdas di grup WhatsApp."
+                " Bantu jawab pertanyaan anggota grup secara singkat, ramah,"
+                " dan jelas."
             )
             ai_reply = ask_openrouter(message, system_prompt)
             send_fonnte_message(group_id, ai_reply)
