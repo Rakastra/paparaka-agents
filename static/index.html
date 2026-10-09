@@ -1,224 +1,258 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sims-Style Startup Office - AI Agent Sup</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1d24; color: #ffffff; }
-    #canvas-container { width: 100vw; height: 100vh; display: block; }
-    
-    #loading-overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: #111318; display: flex; flex-direction: column;
-      justify-content: center; align-items: center; z-index: 100;
-      transition: opacity 0.5s ease;
-    }
-    .spinner {
-      width: 48px; height: 48px; border: 5px solid rgba(0, 173, 181, 0.2);
-      border-top-color: #00adb5; border-radius: 50%;
-      animation: spin 1s linear infinite; margin-bottom: 15px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #loading-text { font-size: 0.95rem; color: #00adb5; letter-spacing: 0.5px; }
-
-    #ui-panel {
-      position: absolute; top: 20px; left: 20px;
-      background: rgba(22, 27, 34, 0.85); backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.1); padding: 15px 20px;
-      border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 10;
-    }
-    #ui-panel h2 { font-size: 1.1rem; margin-bottom: 8px; color: #00adb5; }
-    #ui-panel p { font-size: 0.82rem; line-height: 1.5; color: #cbd5e0; }
-  </style>
-
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-      }
-    }
-  </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kantor Sup</title>
+<style>
+  :root { --bg:#1b1e26; --panel:rgba(24,28,36,.82); --text:#e8ecf1; --muted:#9aa5b4; --accent:#f2b56b; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text);
+    font-family:"Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  #stage { position:fixed; inset:0; }
+  #stage canvas { display:block; touch-action:none; }
+  #loader { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; background:var(--bg); z-index:20; transition:opacity .5s; }
+  #loader.done { opacity:0; pointer-events:none; }
+  .spin { width:36px; height:36px; border:3px solid rgba(255,255,255,.12); border-top-color:var(--accent);
+    border-radius:50%; animation:spin .9s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #hint { position:fixed; left:16px; bottom:16px; z-index:10; padding:10px 14px; border-radius:10px;
+    background:var(--panel); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.08);
+    font-size:.78rem; line-height:1.6; color:var(--muted); }
+  #hint b { color:var(--text); font-weight:600; }
+  #tag { position:fixed; left:0; top:0; z-index:10; pointer-events:none; padding:4px 10px; border-radius:999px;
+    background:var(--panel); border:1px solid rgba(242,181,107,.5); font-size:.75rem; white-space:nowrap;
+    transform:translate(-50%,-100%); }
+  #tag i { display:inline-block; width:7px; height:7px; border-radius:50%; background:#6fd08c; margin-right:6px; }
+  #error { display:none; position:fixed; inset:0; z-index:30; align-items:center; justify-content:center;
+    text-align:center; padding:24px; background:var(--bg); color:var(--muted); }
+  @media (max-width:560px) { #hint { right:16px; font-size:.72rem; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 </head>
 <body>
+<div id="loader"><div class="spin"></div><div>Menyiapkan kantor…</div></div>
+<div id="error">Browser tidak mendukung WebGL. Coba perbarui browser atau aktifkan akselerasi perangkat keras.</div>
+<div id="stage"></div>
+<div id="tag"><i></i>Sup · siaga</div>
+<div id="hint"><b>Seret</b> untuk memutar &nbsp;·&nbsp; <b>Klik kanan + seret</b> untuk menggeser &nbsp;·&nbsp; <b>Scroll</b> untuk zoom</div>
 
-  <div id="loading-overlay">
-    <div class="spinner"></div>
-    <div id="loading-text">Memuat Referensi Desain Kantor 3D...</div>
-  </div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-  <div id="ui-panel">
-    <h2>🏠 Startup Office (The Sims Style)</h2>
-    <p>• <b>Klik Kiri + Drag:</b> Rotasi Kamera Isometrik</p>
-    <p>• <b>Klik Kanan + Drag:</b> Geser Ruangan</p>
-    <p>• <b>Scroll:</b> Zoom In / Out</p>
-  </div>
+const stage = document.getElementById('stage');
+const loader = document.getElementById('loader');
 
-  <div id="canvas-container"></div>
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+} catch (e) {
+  loader.style.display = 'none';
+  document.getElementById('error').style.display = 'flex';
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+stage.appendChild(renderer.domElement);
 
-  <script type="module">
-    import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1b1e26);
 
-    // 1. Setup Scene & Renderer
-    const container = document.getElementById('canvas-container');
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1d24);
+// Kamera isometrik
+const VIEW = 6.2;
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
+camera.position.set(11, 10, 11);
+function fit() {
+  const a = innerWidth / innerHeight;
+  if (a < 1) { camera.left = -VIEW; camera.right = VIEW; camera.top = VIEW / a; camera.bottom = -VIEW / a; }
+  else { camera.left = -VIEW * a; camera.right = VIEW * a; camera.top = VIEW; camera.bottom = -VIEW; }
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+}
+fit();
+addEventListener('resize', fit);
 
-    // 2. Kamera Orthographic Isometrik (Khas The Sims)
-    const aspect = window.innerWidth / window.innerHeight;
-    const viewSize = 5;
-    const camera = new THREE.OrthographicCamera(
-      -viewSize * aspect, viewSize * aspect,
-      viewSize, -viewSize,
-      0.1, 1000
-    );
-    
-    // Sudut Pandang Isometrik dari Atas Miring
-    camera.position.set(10, 10, 10);
-    camera.lookAt(0, 0, 0);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1, 0);
+controls.enableDamping = true;
+controls.minZoom = 0.6; controls.maxZoom = 2.4;
+controls.minPolarAngle = Math.PI / 6; controls.maxPolarAngle = Math.PI / 2.6;
+controls.minAzimuthAngle = Math.PI * 0.05; controls.maxAzimuthAngle = Math.PI * 0.45; // tembok tetap membelakangi kamera
+controls.update();
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
-    container.appendChild(renderer.domElement);
+// Cahaya
+scene.add(new THREE.HemisphereLight(0xfff3e0, 0x3a3f4d, 1.1));
+const sun = new THREE.DirectionalLight(0xffe9c9, 2.2);
+sun.position.set(8, 12, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left:-8, right:8, top:8, bottom:-8, near:1, far:40 });
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
+scene.add(sun);
+const warm = new THREE.PointLight(0xffc27a, 12, 9);
+warm.position.set(0, 2.7, 0); scene.add(warm);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2.25; // Supaya tidak bisa melihat dari bawah lantai
-    controls.target.set(0, 0, 0);
+// Helper
+const mats = {};
+const M = (c, o = {}) => { const k = c + JSON.stringify(o); return mats[k] ??= new THREE.MeshStandardMaterial({ color:c, roughness:.75, metalness:0, ...o }); };
+function box(w, h, d, c, x, y, z, p = scene, o) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof c === 'number' ? M(c, o) : c);
+  m.position.set(x, y + h / 2, z); m.castShadow = m.receiveShadow = true; p.add(m); return m;
+}
+function cyl(rt, rb, h, c, x, y, z, p = scene, seg = 20, o) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), M(c, o));
+  m.position.set(x, y + h / 2, z); m.castShadow = m.receiveShadow = true; p.add(m); return m;
+}
+function sph(r, c, x, y, z, p = scene, sy = 1, o) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), M(c, o));
+  m.position.set(x, y, z); m.scale.y = sy; m.castShadow = true; p.add(m); return m;
+}
+const grp = (x, y, z, ry = 0) => { const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g); return g; };
 
-    // 3. Lighting Ruangan (Hangat & Estetik)
-    const ambientLight = new THREE.AmbientLight(0xfff5ea, 1.5);
-    scene.add(ambientLight);
+// Lantai kayu (tekstur prosedural)
+function woodTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d');
+  const tones = ['#c79a63', '#bf9159', '#cfa56d', '#b98a52'];
+  for (let i = 0; i < 8; i++) {
+    g.fillStyle = tones[i % 4]; g.fillRect(0, i * 64, 512, 64);
+    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, i * 64, 512, 2);
+    const off = (i % 2) * 128;
+    g.fillRect(off, i * 64, 2, 64); g.fillRect(off + 256, i * 64, 2, 64);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 2);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+const floor = new THREE.Mesh(new THREE.BoxGeometry(9, .2, 9), new THREE.MeshStandardMaterial({ map:woodTexture(), roughness:.6 }));
+floor.position.y = -.1; floor.receiveShadow = true; scene.add(floor);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
-    dirLight.position.set(12, 18, 10);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.bias = -0.0001;
-    scene.add(dirLight);
+// Tembok (potongan: hanya belakang & kiri)
+const WALL = 0xeadfce, TRIM = 0x8a6d4b, H = 3.2;
+box(9, H, .2, WALL, 0, 0, -4.4);                 // belakang
+box(.2, H, 9, WALL, -4.4, 0, 0);                 // kiri
+box(9, .12, .24, TRIM, 0, 0, -4.38); box(.24, .12, 9, TRIM, -4.38, 0, 0);          // papan bawah
+box(9.2, .1, .3, 0xd8c9b0, 0, H, -4.4); box(.3, .1, 9.2, 0xd8c9b0, -4.4, H, 0);     // pinggiran atas
 
-    const softFillLight = new THREE.PointLight(0x00adb5, 0.6, 12);
-    softFillLight.position.set(-6, 4, -6);
-    scene.add(softFillLight);
+// Jendela di tembok belakang
+box(2.6, 1.7, .08, 0x5b4630, 2.2, 1.0, -4.27);
+box(2.4, 1.5, .06, new THREE.MeshStandardMaterial({ color:0xbfe3ff, emissive:0x9fd0f5, emissiveIntensity:.9 }), 2.2, 1.1, -4.23);
+box(.05, 1.5, .08, 0x5b4630, 2.2, 1.1, -4.2); box(2.4, .05, .08, 0x5b4630, 2.2, 1.85, -4.2);
 
-    // 4. Fallback Model CDN Ruangan Utuh (Khronos / Open Repo Sample)
-    const SAMPLE_ROOM_URL = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/SheenChair/glTF-Binary/SheenChair.glb';
-    
-    // Alternatif Model Ruangan Utuh dari Khronos Repository
-    const SAMPLE_INTERIOR_URL = 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/models/gltf/ShadowStudio.glb';
+// Papan tulis di tembok kiri
+box(.08, 1.3, 2.2, 0x4a4f57, -4.27, 1.1, 0.4);
+box(.06, 1.14, 2.04, 0xf4f4f0, -4.23, 1.18, 0.4);
+[[.5,.8],[.1,.3],[-.3,.6],[.9,.5]].forEach(([dz, h], i) =>
+  box(.02, .05, h, [0xe0594f,0x3f7fd4,0x4aa86a,0xe8a33d][i], -4.19, 1.55 - i * .2, 0.4 + dz - .5));
 
-    const loader = new GLTFLoader();
-    const loadingOverlay = document.getElementById('loading-overlay');
-    const loadingText = document.getElementById('loading-text');
+// Karpet
+cyl(2.3, 2.3, .03, 0x3d5a73, 0, 0, 0.2, scene, 48);
+cyl(2.0, 2.0, .035, 0x4b6d8b, 0, 0, 0.2, scene, 48);
 
-    async function loadOffice() {
-      try {
-        // Cek file lokal terlebih dahulu
-        const res = await fetch('/api/models');
-        const data = await res.json();
-        const localModels = data.models || [];
+// Meja kerja + monitor + kursi
+function workstation(x, z, ry, screenColor) {
+  const g = grp(x, 0, z, ry);
+  box(1.7, .06, .8, 0xe4cfa8, 0, .72, 0, g);
+  [[-.78,-.34],[.78,-.34],[-.78,.34],[.78,.34]].forEach(([a, b]) => box(.06, .72, .06, 0x5a4a38, a, 0, b, g));
+  box(.5, .05, .22, 0x2b2f36, 0, .78, -.1, g);
+  box(.06, .22, .06, 0x2b2f36, 0, .78, -.22, g);
+  box(.78, .46, .04, 0x1f2329, 0, .98, -.26, g);
+  box(.7, .38, .01, new THREE.MeshStandardMaterial({ color:screenColor, emissive:screenColor, emissiveIntensity:.75 }), 0, 1.02, -.235, g);
+  box(.5, .02, .16, 0x3a3f48, 0, .78, .12, g);       // keyboard
+  cyl(.04, .04, .09, 0xffffff, .62, .78, .1, g, 12);  // cangkir
+  // kursi
+  const ch = new THREE.Group(); ch.position.set(0, 0, .85); g.add(ch);
+  cyl(.2, .2, .04, 0x2b2f36, 0, .03, 0, ch, 5);
+  cyl(.03, .03, .32, 0x555b66, 0, .06, 0, ch, 10);
+  box(.46, .08, .46, 0xd2674a, 0, .4, 0, ch);
+  box(.46, .5, .07, 0xd2674a, 0, .46, .2, ch);
+  return { g, ch };
+}
+const ws = [];
+[-2.4, -0.3, 1.8].forEach((x, i) => ws.push(workstation(x, -3.8, 0, [0x6cb6ff, 0x7be0b0, 0xffc27a][i])));
+[-1.6, 0.5].forEach((z, i) => ws.push(workstation(-3.8, z, Math.PI / 2, [0xc0a0ff, 0x6cb6ff][i])));
 
-        // Jika tidak ada model lokal ruangan yang valid, muat referensi model ruangan utuh
-        let targetUrl = SAMPLE_INTERIOR_URL;
+// Meja rapat bundar
+cyl(.95, .95, .06, 0xe4cfa8, 1.7, .72, 1.0, scene, 36);
+cyl(.08, .14, .72, 0x5a4a38, 1.7, 0, 1.0, scene, 14);
+[[0,1.7],[Math.PI/2,0],[Math.PI,0],[-Math.PI/2,0]].forEach(([a], i) => {
+  const ang = i * Math.PI / 2 + .4, cx = 1.7 + Math.cos(ang) * 1.4, cz = 1.0 + Math.sin(ang) * 1.4;
+  const g = grp(cx, 0, cz, -ang - Math.PI / 2);
+  cyl(.03, .03, .35, 0x555b66, 0, 0, 0, g, 10);
+  box(.42, .07, .42, 0x4b6d8b, 0, .38, 0, g);
+  box(.42, .45, .06, 0x4b6d8b, 0, .44, .18, g);
+});
+box(.5, .02, .36, 0xf4f4f0, 1.5, .78, .9, scene);   // kertas
+box(.3, .02, .22, 0x3a3f48, 1.95, .78, 1.2, scene); // laptop
 
-        if (localModels.length > 0) {
-          // Cari jika ada file office_room / room / office
-          const roomFile = localModels.find(m => m.toLowerCase().includes('office') || m.toLowerCase().includes('room'));
-          if (roomFile) {
-            targetUrl = roomFile;
-          }
-        }
+// Rak buku
+const shelf = grp(-1.0, 0, -4.15, 0);
+box(1.6, 2.0, .35, 0x7a5b3a, 0, 0, 0, shelf);
+[.45, .95, 1.45].forEach(y => box(1.5, .04, .33, 0xa07c52, 0, y, .02, shelf));
+[0,1,2].forEach(r => { let x = -.7;
+  for (let i = 0; i < 9; i++) { const w = .08 + ((i * 37 + r * 11) % 5) * .018, h = .26 + ((i * 13 + r) % 4) * .05;
+    box(w, h, .22, [0xd2674a,0x4b6d8b,0xe8c26a,0x6aa07a,0xf0e6d6][(i + r) % 5], x + w / 2, .05 + r * .5 + (r === 0 ? 0 : .0), .03, shelf);
+    x += w + .02; } });
 
-        loadingText.innerText = 'Memuat model ruangan kantor 3D...';
+// Tanaman
+function plant(x, z, s = 1) {
+  const g = grp(x, 0, z);
+  cyl(.2 * s, .15 * s, .3 * s, 0xc9744f, 0, 0, 0, g, 16);
+  for (let i = 0; i < 7; i++) {
+    const a = i * 0.9, l = sph(.17 * s, 0x5f9c5c, Math.cos(a) * .14 * s, (.5 + (i % 3) * .14) * s, Math.sin(a) * .14 * s, g, 1.8);
+    l.rotation.set(Math.sin(a) * .5, 0, Math.cos(a) * .5);
+  }
+  return g;
+}
+plant(-3.9, -3.9, 1.4); plant(3.9, -3.9, 1.1); plant(3.9, 3.3, 1.2);
 
-        loader.load(
-          targetUrl,
-          (gltf) => {
-            const model = gltf.scene;
+// Sofa & lampu lantai
+const sofa = grp(-3.6, 0, 2.9, Math.PI / 2);
+box(1.9, .35, .8, 0x6b7a8f, 0, .1, 0, sofa); box(1.9, .5, .2, 0x6b7a8f, 0, .35, -.3, sofa);
+box(.2, .55, .8, 0x5d6b7f, -.95, .1, 0, sofa); box(.2, .55, .8, 0x5d6b7f, .95, .1, 0, sofa);
+cyl(.02, .02, 1.5, 0x2b2f36, -3.9, 0, 1.9, scene, 8);
+cyl(.15, .25, .3, new THREE.MeshStandardMaterial({ color:0xfff0c8, emissive:0xffd68a, emissiveIntensity:.8 }), -3.9, 1.45, 1.9, scene, 18);
 
-            // Auto Centering & Auto Scaling agar berada tepat di tengah & proporsional
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
+// Karakter agen "Sup" duduk di meja pertama
+const agent = new THREE.Group(); agent.position.set(0, .5, 0); ws[1].ch.add(agent);
+cyl(.14, .17, .42, 0xf2b56b, 0, .1, 0, agent, 16);
+sph(.13, 0xf5d3b0, 0, .66, 0, agent);
+sph(.135, 0x3a2f2a, 0, .7, .02, agent, .7);
+ws[1].ch.position.z = .6;
 
-            const maxDim = Math.max(size.x, size.y, size.z);
-            if (maxDim > 0) {
-              const scale = 5 / maxDim; // Menyesuaikan ke ukuran layar
-              model.scale.set(scale, scale, scale);
-            }
+// Sembunyikan loader setelah frame pertama
+requestAnimationFrame(() => requestAnimationFrame(() => { loader.classList.add('done'); setTimeout(() => loader.remove(), 600); }));
 
-            model.position.x -= center.x * (5 / maxDim);
-            model.position.y -= box.min.y * (5 / maxDim);
-            model.position.z -= center.z * (5 / maxDim);
+// Label di atas agen
+const tag = document.getElementById('tag');
+const v = new THREE.Vector3();
+const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clock = new THREE.Clock();
 
-            model.traverse((child) => {
-              if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-              }
-            });
-
-            scene.add(model);
-
-            loadingText.innerText = 'Model Ruangan Berhasil Dimuat!';
-            setTimeout(() => {
-              loadingOverlay.style.opacity = '0';
-              setTimeout(() => loadingOverlay.style.display = 'none', 500);
-            }, 300);
-          },
-          (xhr) => {
-            if (xhr.lengthComputable) {
-              const percent = Math.round((xhr.loaded / xhr.total) * 100);
-              loadingText.innerText = `Memuat Aset: ${percent}%`;
-            }
-          },
-          (error) => {
-            console.warn('Gagal memuat model utama, memuat fallback...', error);
-            // Fallback jika terjadi kegagalan jaringan
-            loader.load(SAMPLE_ROOM_URL, (gltf) => {
-              scene.add(gltf.scene);
-              loadingOverlay.style.display = 'none';
-            });
-          }
-        );
-
-      } catch (err) {
-        console.error('Error inisialisasi kantor:', err);
-      }
-    }
-
-    loadOffice();
-
-    // 5. Handling Resize Layar
-    window.addEventListener('resize', () => {
-      const newAspect = window.innerWidth / window.innerHeight;
-      camera.left = -viewSize * newAspect;
-      camera.right = viewSize * newAspect;
-      camera.top = viewSize;
-      camera.bottom = -viewSize;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    // 6. Loop Animasi
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    }
-
-    animate();
-  </script>
+function loop() {
+  requestAnimationFrame(loop);
+  const t = clock.getElapsedTime();
+  if (!still) agent.position.y = .5 + Math.sin(t * 2) * .012;
+  controls.update();
+  renderer.render(scene, camera);
+  agent.getWorldPosition(v); v.y += .55; v.project(camera);
+  tag.style.left = ((v.x + 1) / 2 * innerWidth) + 'px';
+  tag.style.top = ((1 - v.y) / 2 * innerHeight) + 'px';
+}
+loop();
+document.addEventListener('visibilitychange', () => clock.getDelta());
+</script>
 </body>
 </html>
