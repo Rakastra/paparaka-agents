@@ -15,9 +15,9 @@ STATIC_DIR = "static"
 if os.path.exists(STATIC_DIR):
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Endpoint API untuk mengambil daftar seluruh file .glb di folder static/models
 @app.get("/api/models")
 async def list_models():
+    """Mengecek apakah ada file glb lokal di folder static/models"""
     models_dir = os.path.join(STATIC_DIR, "models")
     glb_files = []
     
@@ -25,15 +25,12 @@ async def list_models():
         for root, _, files in os.walk(models_dir):
             for file in files:
                 if file.lower().endswith(".glb"):
-                    # Buat path relatif yang dapat diakses via URL /static/...
                     rel_path = os.path.relpath(os.path.join(root, file), STATIC_DIR)
-                    # Samakan delimiter path untuk URL browser
                     url_path = f"/static/{rel_path.replace(os.sep, '/')}"
                     glb_files.append(url_path)
     
     return JSONResponse(content={"models": glb_files})
 
-# Route Tampilan Utama (3D Virtual Office - Sims Style)
 @app.get("/", response_class=HTMLResponse)
 async def serve_3d_office():
     index_path = os.path.join(STATIC_DIR, "index.html")
@@ -43,46 +40,34 @@ async def serve_3d_office():
     return "<h1>File index.html tidak ditemukan di folder static/</h1>"
 
 # ==========================================
-# 2. AI AGENT CONFIGURATION & SYSTEM PROMPT
+# 2. AI AGENT & WEBHOOK CONFIGURATION
 # ==========================================
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 FONNTE_TOKEN = os.getenv("FONNTE_TOKEN")
-TARGET_GROUP_ID = os.getenv("TARGET_GROUP_ID")  # ID Grup WhatsApp yang diizinkan
+TARGET_GROUP_ID = os.getenv("TARGET_GROUP_ID")
 
 SYSTEM_PROMPT = """
 Kamu adalah AI Agent - Sup, asisten cerdas dan responsif.
 Tugas utama kamu adalah membantu anggota grup WhatsApp dalam:
 1. Menjawab pertanyaan seputar operasional, data, dan umum secara singkat dan tepat.
-2. Membantu mengekstrak data transaksi atau rincian tagihan (Split Bill) dari teks pesan atau foto struk yang dikirimkan.
+2. Membantu mengekstrak data transaksi atau rincian tagihan (Split Bill).
 3. Tetap bersikap sopan, membantu, dan profesional.
 """
 
-# ==========================================
-# 3. HELPER FUNCTIONS
-# ==========================================
 def send_whatsapp_message(target: str, message: str):
-    """Fungsi untuk mengirim balasan pesan via Fonnte API"""
     if not FONNTE_TOKEN:
-        print("[ERROR] FONNTE_TOKEN tidak ditemukan di environment variable.")
         return
-
     url = "https://api.fonnte.com/send"
     headers = {"Authorization": FONNTE_TOKEN}
-    payload = {
-        "target": target,
-        "message": message
-    }
+    payload = {"target": target, "message": message}
     try:
-        response = requests.post(url, headers=headers, data=payload)
-        print(f"[FONNTE RESPONSE] {response.status_code}: {response.text}")
+        requests.post(url, headers=headers, data=payload)
     except Exception as e:
-        print(f"[FONNTE ERROR] Gagal mengirim pesan: {e}")
+        print(f"[FONNTE ERROR] {e}")
 
 def ask_openrouter(prompt_text: str) -> str:
-    """Fungsi untuk memanggil OpenRouter LLM API"""
     if not OPENROUTER_API_KEY:
         return "Maaf, API Key OpenRouter belum dikonfigurasi."
-
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -102,12 +87,8 @@ def ask_openrouter(prompt_text: str) -> str:
             return res_json["choices"][0]["message"]["content"]
         return "Maaf, AI sedang tidak dapat merespons saat ini."
     except Exception as e:
-        print(f"[OPENROUTER ERROR] {e}")
-        return "Terjadi kesalahan saat menghubungkan ke AI Service."
+        return f"Terjadi kesalahan: {e}"
 
-# ==========================================
-# 4. WEBHOOK FONNTE (WHATSAPP AGENT)
-# ==========================================
 @app.post("/webhook")
 async def fonnte_webhook(request: Request):
     try:
@@ -118,11 +99,8 @@ async def fonnte_webhook(request: Request):
         sender = data.get("sender")
         message = data.get("message")
         group_id = data.get("id") or data.get("group")
-        
-        print(f"[WEBHOOK RECEIVED] From: {sender} | Group: {group_id} | Message: {message}")
 
         if TARGET_GROUP_ID and str(group_id) != str(TARGET_GROUP_ID):
-            print(f"[IGNORED] Pesan berasal dari grup/pengirim yang tidak terdaftar: {group_id}")
             return JSONResponse(content={"status": "ignored"})
 
         if message:
@@ -132,5 +110,4 @@ async def fonnte_webhook(request: Request):
 
         return JSONResponse(content={"status": "success"})
     except Exception as e:
-        print(f"[WEBHOOK ERROR] {e}")
         return JSONResponse(content={"status": "error", "detail": str(e)}, status_code=500)
