@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Office Room 3D</title>
+  <title>The Sims Style 3D Office - AI Agent Sup</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #111115; color: #ffffff; }
+    body { overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #20242a; color: #ffffff; }
     #canvas-container { width: 100vw; height: 100vh; display: block; }
     
     #loading-overlay {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: #0f1115; display: flex; flex-direction: column;
+      background: #181a1f; display: flex; flex-direction: column;
       justify-content: center; align-items: center; z-index: 100;
       transition: opacity 0.5s ease;
     }
@@ -21,16 +21,16 @@
       animation: spin 1s linear infinite; margin-bottom: 15px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #loading-text { font-size: 0.95rem; color: #a0aec0; letter-spacing: 0.5px; }
+    #loading-text { font-size: 0.95rem; color: #00adb5; letter-spacing: 0.5px; }
 
     #ui-panel {
       position: absolute; top: 20px; left: 20px;
-      background: rgba(22, 27, 34, 0.8); backdrop-filter: blur(8px);
+      background: rgba(22, 27, 34, 0.85); backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.1); padding: 15px 20px;
-      border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 10;
+      border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 10;
     }
-    #ui-panel h2 { font-size: 1rem; margin-bottom: 6px; color: #00adb5; }
-    #ui-panel p { font-size: 0.8rem; line-height: 1.4; color: #cbd5e0; }
+    #ui-panel h2 { font-size: 1.1rem; margin-bottom: 8px; color: #00adb5; display: flex; align-items: center; gap: 6px; }
+    #ui-panel p { font-size: 0.82rem; line-height: 1.5; color: #cbd5e0; }
   </style>
 
   <script type="importmap">
@@ -46,14 +46,14 @@
 
   <div id="loading-overlay">
     <div class="spinner"></div>
-    <div id="loading-text">Memuat Model 3D Office & Character...</div>
+    <div id="loading-text">Mencari & Memuat Aset 3D Office...</div>
   </div>
 
   <div id="ui-panel">
-    <h2>🏢 Office & Avatar 3D</h2>
-    <p>• <b>Klik Kiri + Geser:</b> Putar Tampilan</p>
-    <p>• <b>Klik Kanan + Geser:</b> Geser Kamera</p>
-    <p>• <b>Scroll:</b> Zoom</p>
+    <h2>🏠 The Sims Style Office Room</h2>
+    <p>• <b>Klik Kiri + Drag:</b> Rotasi Kamera (Isometrik)</p>
+    <p>• <b>Klik Kanan + Drag:</b> Geser Posisi Ruangan</p>
+    <p>• <b>Scroll:</b> Zoom In / Zoom Out</p>
   </div>
 
   <div id="canvas-container"></div>
@@ -63,13 +63,18 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-    // 1. Scene, Camera, Renderer Setup
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x111115);
+    scene.background = new THREE.Color(0x1a1d24);
 
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 5, 8);
+    // 1. Orthographic Camera Setup (Sudut Pandang Isometrik ala The Sims)
+    const aspect = window.innerWidth / window.innerHeight;
+    const d = 10;
+    const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+    
+    // Posisi Isometrik Khas The Sims (Tampilan dari Sudut Atas Miring)
+    camera.position.set(20, 20, 20);
+    camera.lookAt(0, 0, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -77,108 +82,140 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.1;
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.target.set(0, 1, 0);
+    controls.target.set(0, 0, 0);
 
-    // 2. Lighting Setup
+    // 2. Environment & Lighting Setup
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
-    dirLight.position.set(5, 10, 7);
+    dirLight.position.set(15, 25, 15);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 2048;
     dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 50;
+    dirLight.shadow.camera.left = -15;
+    dirLight.shadow.camera.right = 15;
+    dirLight.shadow.camera.top = 15;
+    dirLight.shadow.camera.bottom = -15;
     scene.add(dirLight);
 
-    const fillLight = new THREE.PointLight(0x00adb5, 1.5, 10);
-    fillLight.position.set(-3, 3, -2);
-    scene.add(fillLight);
+    // Lantai Grid Ruangan (Lantai / Floor Room)
+    const floorGeometry = new THREE.PlaneGeometry(16, 16);
+    const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x2e3440, roughness: 0.8 });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
 
-    // 3. Daftar File Model GLB yang akan dimuat
-    // Memastikan path fleksibel membaca dari folder relatif/lokal
-    const modelFiles = [
-      'models/office.glb',
-      'models/character.glb',
-      'models/avatar.glb',
-      'models/office_room.glb',
-      'models/desk.glb',
-      'models/chair.glb'
-    ];
+    const gridHelper = new THREE.GridHelper(16, 16, 0x00adb5, 0x4c566a);
+    gridHelper.position.y = 0.01;
+    scene.add(gridHelper);
 
-    const loadingManager = new THREE.LoadingManager();
-    const loader = new GLTFLoader(loadingManager);
+    // Dinding Belakang khas Isometrik (Dua Sisi Saja)
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x3b4252 });
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(16, 8, 0.2), wallMaterial);
+    backWall.position.set(0, 4, -8);
+    backWall.receiveShadow = true;
+    scene.add(backWall);
 
+    const sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 8, 16), wallMaterial);
+    sideWall.position.set(-8, 4, 0);
+    sideWall.receiveShadow = true;
+    scene.add(sideWall);
+
+    // 3. Auto Loader Aset GLB dari API backend
+    const loader = new GLTFLoader();
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingText = document.getElementById('loading-text');
 
-    loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
-      loadingText.innerText = `Memuat file model (${itemsLoaded}/${itemsTotal})...`;
-    };
+    async function loadAllModels() {
+      try {
+        const response = await fetch('/api/models');
+        const data = await response.json();
+        const modelUrls = data.models || [];
 
-    loadingManager.onLoad = () => {
-      setTimeout(() => {
-        loadingOverlay.style.opacity = '0';
-        setTimeout(() => loadingOverlay.style.display = 'none', 500);
-      }, 300);
-    };
+        if (modelUrls.length === 0) {
+          loadingText.innerText = 'Tidak ada file .glb ditemukan di folder static/models/';
+          setTimeout(() => loadingOverlay.style.display = 'none', 1500);
+          return;
+        }
 
-    // Fungsi pembantu untuk memuat model dengan error handling safe
-    function loadModel(path) {
-      return new Promise((resolve) => {
-        loader.load(
-          path,
-          (gltf) => resolve({ status: 'success', gltf, path }),
-          undefined,
-          (error) => resolve({ status: 'error', error, path })
-        );
-      });
+        let loadedCount = 0;
+        const totalModels = modelUrls.length;
+
+        // Susun tata letak item secara berbaris/grid agar tidak menumpuk di pusat (0,0,0)
+        const gridSize = Math.ceil(Math.sqrt(totalModels));
+        const spacing = 2.2;
+        const startX = -((gridSize - 1) * spacing) / 2;
+        const startZ = -((gridSize - 1) * spacing) / 2;
+
+        for (let i = 0; i < modelUrls.length; i++) {
+          const url = modelUrls[i];
+          const fileName = url.split('/').pop();
+          loadingText.innerText = `Memuat model (${i + 1}/${totalModels}): ${fileName}`;
+
+          try {
+            const gltf = await new Promise((resolve, reject) => {
+              loader.load(url, resolve, undefined, reject);
+            });
+
+            const model = gltf.scene;
+
+            // Hitung bounding box agar objek tepat berada di atas lantai
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+
+            model.traverse((child) => {
+              if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+              }
+            });
+
+            // Posisikan secara grid di atas lantai
+            const row = Math.floor(i / gridSize);
+            const col = i % gridSize;
+            const x = startX + col * spacing;
+            const z = startZ + row * spacing;
+
+            model.position.set(x, -box.min.y, z);
+            scene.add(model);
+            loadedCount++;
+
+          } catch (err) {
+            console.warn(`Gagal memuat file: ${url}`, err);
+          }
+        }
+
+        loadingText.innerText = `Selesai memuat ${loadedCount} model!`;
+        setTimeout(() => {
+          loadingOverlay.style.opacity = '0';
+          setTimeout(() => loadingOverlay.style.display = 'none', 500);
+        }, 300);
+
+      } catch (error) {
+        console.error('Gagal mengambil daftar model:', error);
+        loadingText.innerText = 'Terjadi kesalahan saat memuat aset.';
+      }
     }
 
-    // Load semua file secara paralel
-    let loadedCount = 0;
-    Promise.all(modelFiles.map(file => loadModel(file))).then(results => {
-      results.forEach(res => {
-        if (res.status === 'success') {
-          const model = res.gltf.scene;
-          
-          model.traverse((child) => {
-            if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-            }
-          });
-
-          // Mengatur posisi khusus jika avatar terpisah
-          if (res.path.includes('character') || res.path.includes('avatar')) {
-            model.position.set(0, 0, 0.5); // Posisi duduk/berdiri di area kerja
-          }
-
-          scene.add(model);
-          loadedCount++;
-        }
-      });
-
-      // Jika file folder lokal tidak ketemu, muat model default dari CDN sebagai fallback
-      if (loadedCount === 0) {
-        loadingText.innerText = 'Memuat model office default dari CDN...';
-        loader.load(
-          'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/SheenChair/glTF-Binary/SheenChair.glb',
-          (gltf) => {
-            scene.add(gltf.scene);
-          }
-        );
-      }
-    });
+    loadAllModels();
 
     // 4. Responsive Window Resize
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const aspect = window.innerWidth / window.innerHeight;
+      camera.left = -d * aspect;
+      camera.right = d * aspect;
+      camera.top = d;
+      camera.bottom = -d;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
