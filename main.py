@@ -10,14 +10,33 @@ app = FastAPI(title="AI Agent - Sup")
 # ==========================================
 # 1. MOUNT STATIC FILES (3D OFFICE)
 # ==========================================
-# Memastikan folder /static/ terhubung agar index.html & file .glb dapat diakses
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+STATIC_DIR = "static"
 
-# Route Tampilan Utama (3D Virtual Office)
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# Endpoint API untuk mengambil daftar seluruh file .glb di folder static/models
+@app.get("/api/models")
+async def list_models():
+    models_dir = os.path.join(STATIC_DIR, "models")
+    glb_files = []
+    
+    if os.path.exists(models_dir):
+        for root, _, files in os.walk(models_dir):
+            for file in files:
+                if file.lower().endswith(".glb"):
+                    # Buat path relatif yang dapat diakses via URL /static/...
+                    rel_path = os.path.relpath(os.path.join(root, file), STATIC_DIR)
+                    # Samakan delimiter path untuk URL browser
+                    url_path = f"/static/{rel_path.replace(os.sep, '/')}"
+                    glb_files.append(url_path)
+    
+    return JSONResponse(content={"models": glb_files})
+
+# Route Tampilan Utama (3D Virtual Office - Sims Style)
 @app.get("/", response_class=HTMLResponse)
 async def serve_3d_office():
-    index_path = os.path.join("static", "index.html")
+    index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
         with open(index_path, "r", encoding="utf-8") as f:
             return f.read()
@@ -70,7 +89,7 @@ def ask_openrouter(prompt_text: str) -> str:
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "google/gemini-2.0-flash-lite-001",  # Atau model pilihan kamu
+        "model": "google/gemini-2.0-flash-lite-001",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt_text}
@@ -98,20 +117,16 @@ async def fonnte_webhook(request: Request):
             
         sender = data.get("sender")
         message = data.get("message")
-        group_id = data.get("id") or data.get("group")  # Mendapatkan ID grup jika dari WA Group
+        group_id = data.get("id") or data.get("group")
         
         print(f"[WEBHOOK RECEIVED] From: {sender} | Group: {group_id} | Message: {message}")
 
-        # Batasi respons hanya untuk grup tertentu jika TARGET_GROUP_ID dikonfigurasi
         if TARGET_GROUP_ID and str(group_id) != str(TARGET_GROUP_ID):
             print(f"[IGNORED] Pesan berasal dari grup/pengirim yang tidak terdaftar: {group_id}")
             return JSONResponse(content={"status": "ignored"})
 
         if message:
-            # Panggil OpenRouter untuk mendapatkan balasan AI
             ai_reply = ask_openrouter(message)
-            
-            # Kirim balasan kembali ke WhatsApp
             reply_target = group_id if group_id else sender
             send_whatsapp_message(reply_target, ai_reply)
 
