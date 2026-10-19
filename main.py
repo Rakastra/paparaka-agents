@@ -1,6 +1,12 @@
 import os
+import time
 import logging
 import requests
+from collections import deque
+from itertools import count
+from typing import List
+from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -62,7 +68,7 @@ def send_whatsapp_message(target: str, message: str):
         log.error("Fonnte error: %s", e)
 
 
-def ask_openrouter(prompt_text: str) -> str:
+def ask_openrouter(prompt_text: str, history=None) -> str:
     if not OPENROUTER_API_KEY:
         return "Maaf, API Key OpenRouter belum dikonfigurasi."
     try:
@@ -74,10 +80,8 @@ def ask_openrouter(prompt_text: str) -> str:
             },
             json={
                 "model": MODEL,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt_text},
-                ],
+                "messages": [{"role": "system", "content": SYSTEM_PROMPT}, *(history or []),
+                             {"role": "user", "content": prompt_text}],
             },
             timeout=TIMEOUT,
         )
@@ -89,6 +93,51 @@ def ask_openrouter(prompt_text: str) -> str:
     except Exception as e:
         log.error("OpenRouter error: %s", e)
         return "Maaf, terjadi kendala saat menghubungi AI. Coba lagi sebentar."
+
+
+# ==========================================
+# Chat interaktif dari board 3D + aktivitas WhatsApp
+# ==========================================
+EVENTS = deque(maxlen=30)
+_ids = count(1)
+_hits = {}
+SHOW_ACTIVITY = os.getenv("SHOW_ACTIVITY", "0") == "1"   # default mati: pesan WA tidak dibuka ke publik
+
+
+class ChatIn(BaseModel):
+    message: str = Field(..., min_length=1, max_length=1000)
+    history: List[dict] = []
+
+
+def rate_ok(ip: str, limit: int = 12) -> bool:
+    now = time.time()
+    q = [x for x in _hits.get(ip, []) if now - x < 60]
+    ok = len(q) < limit
+    if ok:
+        q.append(now)
+    _hits[ip] = q
+    return ok
+
+
+@app.post("/api/chat")
+async def api_chat(body: ChatIn, request: Request):
+    ip = request.client.host if request.client else "unknown"
+    if not rate_ok(ip):
+        return JSONResponse({"detail": "Terlalu banyak permintaan"}, status_code=429)
+    history = [
+        {"role": h["role"], "content": str(h.get("content", ""))[:1000]}
+        for h in body.history[-6:] if h.get("role") in ("user", "assistant")
+    ]
+    reply = await run_in_threadpool(ask_openrouter, body.message.strip(), history)
+    return {"reply": reply}
+
+
+@app.get("/api/activity")
+async def api_activity(since: int = 0):
+    if not SHOW_ACTIVITY:
+        return {"events": [], "last": 0}
+    events = [e for e in EVENTS if e["id"] > since]
+    return {"events": events, "last": EVENTS[-1]["id"] if EVENTS else 0}
 
 
 @app.post("/webhook")
@@ -105,7 +154,9 @@ async def fonnte_webhook(request: Request):
             return {"status": "ignored"}
 
         if message:
-            send_whatsapp_message(group_id or sender, ask_openrouter(message))
+            reply = await run_in_threadpool(ask_openrouter, message)
+            await run_in_threadpool(send_whatsapp_message, group_id or sender, reply)
+            EVENTS.append({"id": next(_ids), "sender": "…" + str(sender)[-4:], "message": str(message)[:80], "reply": reply[:160]})
 
         return {"status": "success"}
     except Exception as e:
