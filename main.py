@@ -8,7 +8,7 @@ from typing import List
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 logging.basicConfig(level=logging.INFO)
@@ -25,10 +25,18 @@ if os.path.isdir(STATIC_DIR):
 
 @app.get("/", include_in_schema=False)
 async def serve_office():
-    index_path = os.path.join(STATIC_DIR, "index.html")
-    if os.path.isfile(index_path):
-        return FileResponse(index_path, headers={"Cache-Control": "no-cache"})
-    return JSONResponse({"detail": "static/index.html tidak ditemukan"}, status_code=404)
+    possible_paths = [
+        os.path.join(STATIC_DIR, "index.html"),
+        os.path.join(BASE_DIR, "index.html"),
+        os.path.join(BASE_DIR, "index (1).html"),
+    ]
+    
+    for path in possible_paths:
+        if os.path.isfile(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return HTMLResponse(content=f.read(), headers={"Cache-Control": "no-cache"})
+                
+    return JSONResponse({"detail": "File index.html tidak ditemukan di static/ atau root"}, status_code=404)
 
 
 @app.get("/health", include_in_schema=False)
