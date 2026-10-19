@@ -86,9 +86,9 @@ function poly(pts, fill, stroke) {
 }
 function drawBox(x, y, w, d, h, c, z0) {
   const e = 'rgba(0,0,0,.14)';
-  poly([[x, y + d, z0], [x + w, y + d, z0], [x + w, y + d, z0 + h], [x, y + d, z0 + h]], shade(c, .72), e);   // sisi kiri
-  poly([[x + w, y, z0], [x + w, y + d, z0], [x + w, y + d, z0 + h], [x + w, y, z0 + h]], shade(c, .88), e);   // sisi kanan
-  poly([[x, y, z0 + h], [x + w, y, z0 + h], [x + w, y + d, z0 + h], [x, y + d, z0 + h]], shade(c, 1.12), e);  // atas
+  poly([[x, y + d, z0], [x + w, y + d, z0], [x + w, y + d, z0 + h], [x, y + d, z0 + h]], shade(c, .72), e);
+  poly([[x + w, y, z0], [x + w, y + d, z0], [x + w, y + d, z0 + h], [x + w, y, z0 + h]], shade(c, .88), e);
+  poly([[x, y, z0 + h], [x + w, y, z0 + h], [x + w, y + d, z0 + h], [x, y + d, z0 + h]], shade(c, 1.12), e);
 }
 function drawCyl(cx, cy, r, h, c, z0) {
   const [sx, sy] = P(cx, cy, z0), s = S(), rx = r * TW * .7071 * s, ry = r * TH * .7071 * s, hp = h * s;
@@ -104,20 +104,20 @@ const cyl = (cx, cy, r, h, c, z0 = 0) => add(cx + cy + z0 / 1000, () => drawCyl(
 // ---------- Furnitur ----------
 const WOOD = '#e4cfa8', LEG = '#5a4a38', DARK = '#2b2f36';
 const SILVER = '#c9ccd1';
-function laptop(x, y, o, sc, dz = 0, k = 1.3) {      // MacBook terbuka di atas meja
+function laptop(x, y, o, sc, dz = 0, k = 1.3) {
   const z = 32 + dz, w = .7 * k, d = .42 * k, lh = 24 * k, T = .04, kb = '#aeb2b9';
-  if (o === 'S') {                                    // layar menghadap +y
+  if (o === 'S') {
     box(x, y + T, w, d, 2, SILVER, z); box(x, y, w, T, lh, SILVER, z + 2);
     add(x + w / 2 + y + .3, () => { const yy = y + T + .002;
       poly([[x + .02, yy, z + 4], [x + w - .02, yy, z + 4], [x + w - .02, yy, z + lh], [x + .02, yy, z + lh]], '#15171c');
       poly([[x + .05, yy + .002, z + 6], [x + w - .05, yy + .002, z + 6], [x + w - .05, yy + .002, z + lh - 3], [x + .05, yy + .002, z + lh - 3]], sc); });
     box(x + w * .17, y + d * .45, w * .66, d * .38, .6, kb, z + 2);
-  } else if (o === 'N') {                             // layar menghadap -y (pengguna di sisi belakang meja)
+  } else if (o === 'N') {
     box(x, y, w, d, 2, SILVER, z); box(x, y + d, w, T, lh, SILVER, z + 2);
     box(x + w * .17, y + d * .2, w * .66, d * .38, .6, kb, z + 2);
     add(x + w / 2 + y + d + .3, () => { const [sx, sy] = P(x + w / 2, y + d + T + .002, z + 2 + lh / 2), r = S();
       ctx.fillStyle = '#f5f5f7'; ctx.beginPath(); ctx.ellipse(sx, sy, 4.5 * r, 5.5 * r, 0, 0, 7); ctx.fill(); });
-  } else {                                            // 'E': layar menghadap +x
+  } else {
     box(x + T, y, d, w, 2, SILVER, z); box(x, y, T, w, lh, SILVER, z + 2);
     add(x + .3 + y + w / 2, () => { const xx = x + T + .002;
       poly([[xx, y + .02, z + 4], [xx, y + w - .02, z + 4], [xx, y + w - .02, z + lh], [xx, y + .02, z + lh]], '#15171c');
@@ -129,13 +129,13 @@ function legs(x, y, w, d, h, c) { [[.04, .04], [w - .12, .04], [.04, d - .12], [
 function stool(cx, cy) { cyl(cx, cy, .04, 16, '#555b66'); cyl(cx, cy, .2, 4, '#d2674a', 16); }
 function line(pts, col, wd = 1) { ctx.beginPath(); pts.forEach(([a, b, z], i) => { const [px, py] = P(a, b, z); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }); ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.stroke(); }
 const PLAN = [[.12, .15, .62, .15], [.62, .15, .62, .75], [.62, .75, .12, .75], [.12, .75, .12, .15], [.12, .45, .62, .45], [.37, .15, .37, .45], [.72, .2, .9, .2], [.72, .35, .9, .35], [.72, .5, .9, .5]];
-function blueprint(x, y, w, d, z = 32.2) {              // lembar cetak biru: kertas biru + grid + denah
+function blueprint(x, y, w, d, z = 32.2) {
   poly([[x, y, z], [x + w, y, z], [x + w, y + d, z], [x, y + d, z]], '#2f6db5', '#1d4f8c');
   const g = (u, v) => [x + u * w, y + v * d, z + .1];
   for (let i = 1; i < 6; i++) { line([g(i / 6, 0), g(i / 6, 1)], 'rgba(255,255,255,.25)'); line([g(0, i / 6), g(1, i / 6)], 'rgba(255,255,255,.25)'); }
   PLAN.forEach(([a, b, c, d2]) => line([g(a, b), g(c, d2)], '#ffffff', 1.2));
 }
-function draftingTable(x, y) {                         // meja gambar arsitek (papan miring)
+function draftingTable(x, y) {
   [[.08, .08, 56], [1.64, .08, 56], [.08, .72, 38], [1.64, .72, 38]].forEach(([a, b, h]) => box(x + a, y + b, .08, .08, h, '#5a4a38'));
   add(x + .9 + y + .46, () => { const bp = (u, v) => [x + .1 + u * 1.6, y + .1 + v * .7, 56 - 16 * v];
     poly([bp(0, 0), bp(1, 0), bp(1, 1), bp(0, 1)], '#efe9d8', '#5a4a38');
@@ -143,7 +143,7 @@ function draftingTable(x, y) {                         // meja gambar arsitek (p
     PLAN.forEach(([a, b, c, d]) => line([bp(a, b), bp(c, d)], '#2f6db5', 1.2));
     line([bp(0, .62), bp(1, .62)], '#c9a26b', 3); });
 }
-function civilDesk(x, y) {                             // meja teknik sipil: blueprint, maket, gulungan, helm proyek
+function civilDesk(x, y) {
   box(x, y, 1.8, .9, 6, '#e4cfa8', 26); legs(x, y, 1.8, .9, 26, '#5a4a38');
   add(x + .6 + y + .46, () => blueprint(x + .1, y + .12, 1.0, .66));
   box(x + 1.25, y + .1, .3, .3, 12, '#c5cbd3', 32); box(x + 1.3, y + .15, .2, .2, 10, '#dde2e8', 44);
@@ -152,7 +152,7 @@ function civilDesk(x, y) {                             // meja teknik sipil: blu
     ctx.fillStyle = '#d9a91c'; ctx.beginPath(); ctx.ellipse(sx, sy, 11 * s, 4.5 * s, 0, 0, 7); ctx.fill();
     ctx.fillStyle = '#f2c230'; ctx.beginPath(); ctx.ellipse(sx, sy - 4 * s, 8 * s, 8 * s, 0, Math.PI, 0); ctx.fill(); });
 }
-function workbench(x, y) {                             // meja workshop: catok, perkakas, kayu
+function workbench(x, y) {
   box(x, y, .9, 1.8, 8, '#8a6a45', 28); legs(x, y, .9, 1.8, 28, '#4a3a2a'); box(x + .05, y + .05, .8, 1.7, 3, '#6b4f33', 10);
   box(x + .06, y + .1, .26, .26, 10, '#555b66', 36); box(x + .1, y + .36, .18, .06, 10, '#3a3f46', 36);
   box(x + .5, y + 1.15, .32, .5, 10, '#c9432f', 36); box(x + .58, y + 1.35, .16, .1, 3, '#8f2f20', 46);
@@ -160,7 +160,7 @@ function workbench(x, y) {                             // meja workshop: catok, 
   box(x + .3, y + .95, .55, .18, 3, '#d9b27a', 36); box(x + .35, y + .97, .45, .14, 3, '#c99d62', 39);
   cyl(x + .2, y + .8, .07, 8, '#9aa5b4', 36); cyl(x + .2, y + 1.05, .06, 6, '#e8c26a', 36);
 }
-function planTable(x, y) {                             // meja denah: blueprint besar + maket + gulungan
+function planTable(x, y) {
   box(x, y, .9, 1.8, 6, '#e4cfa8', 26); legs(x, y, .9, 1.8, 26, '#5a4a38');
   add(x + .45 + y + .9, () => blueprint(x + .08, y + .1, .74, .95));
   box(x + .12, y + 1.2, .3, .3, 16, '#c5cbd3', 32); box(x + .5, y + 1.25, .25, .25, 10, '#dde2e8', 32); box(x + .16, y + 1.24, .22, .22, 8, '#e8ecf0', 48);
@@ -194,13 +194,13 @@ add(-1e6, () => {
 const TB = { x: 6.4, y: 6.2 };
 function ring(r, z, fill) { const pts = []; for (let i = 0; i < 48; i++) { const a = i / 48 * Math.PI * 2; pts.push([TB.x + Math.cos(a) * r, TB.y + Math.sin(a) * r, z]); } poly(pts, fill); }
 add(-9e5, () => { ring(2.1, .4, '#3d5a73'); ring(1.8, .5, '#4b6d8b'); });
-add(-8e5, () => {                                   // dinding (potongan) + jendela + papan tulis
+add(-8e5, () => {
   drawBox(-.3, -.3, N + .3, .3, WH, '#eadfce', 0); drawBox(-.3, 0, .3, N, WH, '#e2d6c2', 0);
   poly([[1.3, 0, 70], [3.3, 0, 70], [3.3, 0, 125], [1.3, 0, 125]], '#bfe3ff', '#5b4630');
   poly([[2.3, 0, 70], [2.3, 0, 125]].concat([[2.3, 0, 125], [2.3, 0, 70]]), null, '#5b4630');
   poly([[6.95, 0, 70], [8.55, 0, 70], [8.55, 0, 125], [6.95, 0, 125]], '#bfe3ff', '#5b4630');
   poly([[6.95, 0, 128], [8.55, 0, 128], [8.55, 0, 146], [6.95, 0, 146]], '#f7f4ee', '#5b4630');
-  const [tx, ty] = P(7.75, 0, 137); ctx.save(); ctx.translate(tx, ty); ctx.transform(1, .5, 0, 1, 0, 0);   // teks mengikuti bidang dinding
+  const [tx, ty] = P(7.75, 0, 137); ctx.save(); ctx.translate(tx, ty); ctx.transform(1, .5, 0, 1, 0, 0);
   ctx.fillStyle = '#2b2f36'; ctx.font = `700 ${Math.max(7, 10 * S())}px "Segoe UI", system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('CEO OFFICE', 0, 0); ctx.restore();
   poly([[0, 4.7, 62], [0, 6.3, 62], [0, 6.3, 112], [0, 4.7, 112]], '#f4f4f0', '#4a4f57');
@@ -211,12 +211,12 @@ add(-8e5, () => {                                   // dinding (potongan) + jend
   poly([[3.7, 0, 72], [5.1, 0, 72], [5.1, 0, 112], [3.7, 0, 112]], '#2f6db5', '#e8ecf1');
   [[3.85, 5.0, 100], [3.85, 5.0, 92], [3.85, 4.5, 84]].forEach(([a, b, z]) => line([[a, 0, z], [b, 0, z]], 'rgba(255,255,255,.8)', 1.5));
   line([[3.9, 0, 78], [4.3, 0, 78], [4.3, 0, 84]], '#fff', 1.5);
-
 });
 draftingTable(1, .15); civilDesk(3.4, .15); workbench(.15, 2.4); planTable(.15, 4.6);
 stool(1.9, 1.62); stool(4.3, 1.62); stool(1.62, 3.3); stool(1.62, 5.5);
-// ===== Ruang CEO (khusus Sup) · simetris terhadap sumbu x = CX =====
-const CX = 7.75, RD = 3.9, LW = 5.45, RW = 9.95, DG = [CX - .6, CX + .6];   // sumbu, kedalaman, dinding kiri/kanan, celah pintu
+
+// ===== Ruang CEO (khusus Sup) =====
+const CX = 7.75, RD = 3.9, LW = 5.45, RW = 9.95, DG = [CX - .6, CX + .6];
 const SEAT = { x: CX, y: .5 }, door = { open: false, t: 0 };
 add(-9.5e5, () => {
   poly([[5.5, 0, .3], [10, 0, .3], [10, RD, .3], [5.5, RD, .3]], '#6e4c33', 'rgba(0,0,0,.12)');
@@ -231,13 +231,12 @@ function shelf(x, w) {
         ['#d2674a', '#4b6d8b', '#e8c26a', '#6aa07a', '#f0e6d6'][(i + r) % 5]); });
 }
 shelf(9.35, .5); cyl(9.6, .35, .1, 12, '#4b6d8b', 118);
-// meja eksekutif: Sup duduk di sisi dinding, menghadap pintu
 box(CX - .7, .95, 1.4, 1, 6, '#6b4a2e', 26); box(CX - .7, .95, .1, 1, 26, '#5a3d25'); box(CX + .6, .95, .1, 1, 26, '#5a3d25'); box(CX - .6, 1.87, 1.2, .08, 20, '#5a3d25', 6);
 laptop(CX - .4, 1.1, 'N', '#f2b56b', 0, 1.15);
 cyl(CX - .55, 1.2, .09, 3, '#2b2f36', 32); cyl(CX - .55, 1.2, .02, 18, '#2b2f36', 35); cyl(CX - .55, 1.2, .12, 6, '#e8c26a', 53); cyl(CX + .55, 1.2, .07, 9, '#ffffff', 32);
 chair(SEAT.x, SEAT.y, 'N', '#1f2229'); box(CX - .28, .16, .56, .08, 16, '#1f2229', 42);
 chair(CX - .8, 2.9, 'S', '#8c2f39'); chair(CX + .8, 2.9, 'S', '#8c2f39');
-// partisi kaca simetris + pintu geser
+
 const FR = '#8a6d4b', PL = '#d8c9b0';
 const glass = (d, pts) => add(d, () => poly(pts, 'rgba(190,225,245,.2)', 'rgba(255,255,255,.4)'));
 [LW, RW].forEach(x0 => { const xf = x0 + .1; box(x0, 0, .1, RD, 10, PL); box(x0, 0, .1, RD, 6, FR, 90); glass(xf + 1.8, [[xf, 0, 10], [xf, RD - .05, 10], [xf, RD - .05, 90], [xf, 0, 90]]); });
@@ -252,17 +251,15 @@ add(CX + RD + .1, () => {
   poly([[x0 + 1.04, y, 40], [x0 + 1.1, y, 40], [x0 + 1.1, y, 66], [x0 + 1.04, y, 66]], '#e8ecf1');
   const [lx, ly] = P(CX, RD + .05, 102); ctx.fillStyle = door.open ? '#6fd08c' : '#e0594f'; ctx.beginPath(); ctx.arc(lx, ly, 4 * S(), 0, 7); ctx.fill();
 });
-// sofa
+
 box(.55, 6.9, .9, 1.9, 14, '#6b7a8f'); box(.2, 6.9, .35, 1.9, 38, '#5d6b7f');
 box(.55, 6.9, .9, .25, 28, '#5d6b7f'); box(.55, 8.55, .9, .25, 28, '#5d6b7f');
-// meja rapat
 [['W', -1.35, 0], ['E', 1.35, 0], ['N', 0, -1.35], ['S', 0, 1.35]].forEach(([b, dx, dy]) => chair(TB.x + dx, TB.y + dy, b, '#4b6d8b'));
 cyl(TB.x, TB.y, .14, 24, LEG); cyl(TB.x, TB.y, .88, 5, WOOD, 24);
 
 plant(.65, .75, 1.3); plant(5.95, 3.45, 1.0); plant(9.55, 3.45, 1.0); plant(9.3, 9.3, 1.2); plant(.7, 9.3, 1.0);
 
-// ---------- Agen (bidak) ----------
-// ---------- Grid jalan Sup (pathfinding) ----------
+// ---------- Pathfinding Grid ----------
 const GC = .25, GN = N / GC, cellOf = v => Math.max(0, Math.min(GN - 1, Math.floor(v / GC)));
 const BL = [[1, .15, 1.8, .9], [3.4, .15, 1.8, .9], [.15, 2.4, .9, 1.8], [.15, 4.6, .9, 1.8],
   [1.62, 1.34, .56, .56], [4.02, 1.34, .56, .56], [1.34, 3.02, .56, .56], [1.34, 5.22, .56, .56], [.2, 6.9, 1.25, 1.9],
@@ -293,7 +290,7 @@ function findPath(sx, sy, tx, ty, open) {
   return out.slice(1);
 }
 
-// Graf jalur jalan (titik bebas furnitur) untuk kru yang belum terhubung AI Agent
+// Node pergerakan karakter lain
 const NODES = [[3, 2.9], [4.9, 3.3], [3, 5.2], [4.8, 5], [3.2, 7.4], [4.2, 9], [7.75, 4.3], [8.8, 5], [8.9, 8], [6.4, 9.2], [2.6, 9], [5.6, 4.3]];
 const LINKS = { 0: [1, 2], 1: [0, 3], 2: [0, 3, 4], 3: [1, 2, 11], 4: [2, 5, 10], 5: [4, 9, 10], 6: [11, 7], 7: [6, 8], 8: [7, 9], 9: [8, 5], 10: [4, 5], 11: [3, 6] };
 const SPOT = { 3: 'Diskusi dekat meja rapat', 4: 'Merapikan area sofa', 5: 'Mengambil kopi', 6: 'Menunggu di depan ruang CEO', 8: 'Mengecek sudut kantor', 9: 'Merapikan meja rapat' };
@@ -371,7 +368,7 @@ let last = performance.now();
 // ---------- Interaksi ----------
 const card = document.getElementById('card'), chips = document.getElementById('chips');
 function cardStatus() { const el = card.querySelector('[data-st]'); if (el) el.textContent = sel.st; }
-const $ = id => document.getElementById(id), chat = $('chat'), log = $('log'), cin = $('cin'), csend = $('csend');
+const $ = id => document.getElementById(id), chat = $('chat'), log =$('log'), cin = $('cin'), csend =$('csend');
 const hist = []; let busy = false;
 function addMsg(cls, text) { const d = document.createElement('div'); d.className = 'm ' + cls; d.textContent = text; log.append(d); log.scrollTop = log.scrollHeight; return d; }
 function say(p, text, ms = 8000) { p.say = text; p.sayUntil = t + ms / 1000; }
@@ -397,8 +394,7 @@ async function ask(text) {
     const m = 'Maaf, saya belum bisa terhubung ke server. Coba lagi sebentar ya.'; wait.textContent = m; wait.classList.add('sys'); say(sup, m, 5000);
   } finally { sup.think = false; sup.st = sup.moving ? 'Berjalan…' : supIdle(); busy = false; csend.disabled = false; log.scrollTop = log.scrollHeight; cin.focus(); }
 }
-$('cform').addEventListener('submit', e => { e.preventDefault(); const v = cin.value; cin.value = ''; ask(v); });
-$('quick').addEventListener('click', e => { if (e.target.tagName !== 'BUTTON') return;
+$('cform').addEventListener('submit', e => { e.preventDefault(); const v = cin.value; cin.value = ''; ask(v); });$('quick').addEventListener('click', e => { if (e.target.tagName !== 'BUTTON') return;
   const v = e.target.textContent; v.startsWith('🪑') ? moveSup(SEAT.x, SEAT.y + .1, true) : ask(v); });
 const dbtn = $('dbtn');
 function setDoor(v) { door.open = v; dbtn.textContent = '🚪 Pintu CEO: ' + (v ? 'Buka' : 'Tutup'); dbtn.classList.toggle('on', v); }
@@ -412,14 +408,14 @@ function moveSup(tx, ty, seat) {
 }
 $('cx').onclick = () => select(null);
 addEventListener('keydown', e => { if (e.key === 'Escape') select(null); });
-// Pesan WhatsApp nyata (aktif bila backend menyalakan SHOW_ACTIVITY=1)
+
 let lastEv = null;
 async function poll() {
   if (document.hidden) return;
   try { const r = await fetch('/api/activity?since=' + (lastEv ?? 0)); if (!r.ok) return; const j = await r.json();
     if (lastEv === null) { lastEv = j.last; return; }
     j.events.forEach(e => { lastEv = Math.max(lastEv, e.id); addMsg('sys', '📩 WhatsApp ' + e.sender + ': ' + e.message); addMsg('sup', e.reply); say(agents[0], '📩 ' + e.message + '\n→ ' + e.reply, 9000); });
-  } catch (e) { /* backend belum tersedia */ }
+  } catch (e) { }
 }
 setInterval(poll, 5000); poll();
 agents.forEach(p => { const b = document.createElement('button'); b.className = 'chip'; b.innerHTML = '<i></i>'; b.firstChild.style.background = p.c;
