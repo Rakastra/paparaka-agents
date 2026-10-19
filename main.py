@@ -8,13 +8,13 @@ from typing import List
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("sup")
 
-app = FastAPI(title="AI Agent - Sup")
+app = FastAPI(title="Kantor Sup - Board 2.5D")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -28,7 +28,6 @@ async def serve_office():
     possible_paths = [
         os.path.join(STATIC_DIR, "index.html"),
         os.path.join(BASE_DIR, "index.html"),
-        os.path.join(BASE_DIR, "index (1).html"),
     ]
     
     for path in possible_paths:
@@ -36,7 +35,7 @@ async def serve_office():
             with open(path, "r", encoding="utf-8") as f:
                 return HTMLResponse(content=f.read(), headers={"Cache-Control": "no-cache"})
                 
-    return JSONResponse({"detail": "File index.html tidak ditemukan di static/ atau root"}, status_code=404)
+    return JSONResponse({"detail": "File index.html tidak ditemukan"}, status_code=404)
 
 
 @app.get("/health", include_in_schema=False)
@@ -45,7 +44,7 @@ async def health():
 
 
 # ==========================================
-# AI Agent & Webhook
+# AI Agent & Webhook Configuration
 # ==========================================
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 FONNTE_TOKEN = os.getenv("FONNTE_TOKEN")
@@ -54,11 +53,11 @@ MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-lite-001")
 TIMEOUT = 30
 
 SYSTEM_PROMPT = """
-Kamu adalah AI Agent - Sup, asisten cerdas dan responsif.
-Tugas utama kamu adalah membantu anggota grup WhatsApp dalam:
+Kamu adalah AI Agent - Sup, asisten cerdas dan responsif yang berada di Kantor 2.5D.
+Tugas utama kamu adalah membantu anggota grup WhatsApp dan pengunjung website dalam:
 1. Menjawab pertanyaan seputar operasional, data, dan umum secara singkat dan tepat.
 2. Membantu mengekstrak data transaksi atau rincian tagihan (Split Bill).
-3. Tetap bersikap sopan, membantu, dan profesional.
+3. Tetap bersikap sopan, membantu, ramah, dan profesional.
 """
 
 
@@ -96,7 +95,6 @@ def ask_openrouter(prompt_text: str, history=None) -> str:
         choices = res.json().get("choices") or []
         if choices:
             return choices[0]["message"]["content"]
-        log.warning("OpenRouter tanpa choices: %s", res.text[:300])
         return "Maaf, AI sedang tidak dapat merespons saat ini."
     except Exception as e:
         log.error("OpenRouter error: %s", e)
@@ -104,12 +102,12 @@ def ask_openrouter(prompt_text: str, history=None) -> str:
 
 
 # ==========================================
-# Chat interaktif dari board 3D + aktivitas WhatsApp
+# API Chat & WhatsApp Activity Logging
 # ==========================================
 EVENTS = deque(maxlen=30)
 _ids = count(1)
 _hits = {}
-SHOW_ACTIVITY = os.getenv("SHOW_ACTIVITY", "0") == "1"   # default mati: pesan WA tidak dibuka ke publik
+SHOW_ACTIVITY = os.getenv("SHOW_ACTIVITY", "0") == "1"
 
 
 class ChatIn(BaseModel):
