@@ -2,6 +2,7 @@ import os
 import time
 import logging
 import requests
+from pathlib import Path
 from collections import deque
 from itertools import count
 from typing import List
@@ -16,26 +17,31 @@ log = logging.getLogger("sup")
 
 app = FastAPI(title="Kantor Sup - Board 2.5D")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+# Menggunakan pathlib untuk akurasi path di serverless Vercel
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
 
-if os.path.isdir(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# Mount folder static untuk file CSS, JS, dan gambar
+if STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/", include_in_schema=False)
 async def serve_office():
     possible_paths = [
-        os.path.join(STATIC_DIR, "index.html"),
-        os.path.join(BASE_DIR, "index.html"),
+        STATIC_DIR / "index.html",
+        BASE_DIR / "index.html",
     ]
     
     for path in possible_paths:
-        if os.path.isfile(path):
+        if path.is_file():
             with open(path, "r", encoding="utf-8") as f:
                 return HTMLResponse(content=f.read(), headers={"Cache-Control": "no-cache"})
                 
-    return JSONResponse({"detail": "File index.html tidak ditemukan"}, status_code=404)
+    return JSONResponse(
+        {"detail": f"File index.html tidak ditemukan. Searched in: {[str(p) for p in possible_paths]}"}, 
+        status_code=404
+    )
 
 
 @app.get("/health", include_in_schema=False)
