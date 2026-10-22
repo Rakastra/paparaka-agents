@@ -429,10 +429,10 @@ const SPOT = { 3: 'Diskusi dekat meja rapat', 4: 'Merapikan area sofa', 5: 'Meng
   13: 'Ngopi di pantry', 14: 'Duduk santai di pantry', 15: 'Ngemil di pantry', 19: 'Main biliar', 20: 'Main biliar', 21: 'Main biliar', 22: 'Main game di konsol', 24: 'Main game di konsol', 25: 'Main game di konsol', 26: 'Main game di konsol',
   29: 'Check-in di resepsionis', 30: 'Menunggu di lobby', 31: 'Menunggu di lobby' };
 const agents = [
-  { n: 'Sup', role: 'CEO · AI Agent WhatsApp', c: '#f2b56b', x: SEAT.x, y: SEAT.y, z: 20, tz: 20, fx: 0, fy: 1, seated: true, st: 'Siaga di ruang CEO', ai: true },
-  { n: 'Nayla', role: 'Arsitek', c: '#6cb6ff', node: 0, work: 'Meninjau sketsa denah' }, { n: 'Zidan', role: 'Insinyur sipil', c: '#7be0b0', node: 2, work: 'Mengecek gambar struktur' },
-  { n: 'Davin', role: 'Teknisi workshop', c: '#c0a0ff', node: 4, work: 'Mencari perkakas' }, { n: 'Keysha', role: 'Drafter blueprint', c: '#ff8f8f', node: 8, work: 'Memeriksa blueprint' },
-  { n: 'Tasya', role: 'Resepsionis', c: '#ffb3d9', x: 2.3, y: 10.9, z: 0, fx: 0, fy: 1, st: 'Menyambut tamu di lobby' },
+  { n: 'Sup', role: 'CEO · AI Agent WhatsApp', c: '#f2b56b', style: 'short', hair: '#3a2f2a', shirt: '#2b2f36', pants: '#2b2f36', suit: true, x: SEAT.x, y: SEAT.y, z: 20, tz: 20, fx: 0, fy: 1, seated: true, st: 'Siaga di ruang CEO', ai: true },
+  { n: 'Nayla', role: 'Arsitek', c: '#6cb6ff', style: 'long', hair: '#6b4a2e', node: 0, work: 'Meninjau sketsa denah' }, { n: 'Zidan', role: 'Insinyur sipil', c: '#7be0b0', style: 'hardhat', hair: '#f2c230', node: 2, work: 'Mengecek gambar struktur' },
+  { n: 'Davin', role: 'Teknisi workshop', c: '#c0a0ff', style: 'cap', hair: '#c9432f', node: 4, work: 'Mencari perkakas' }, { n: 'Keysha', role: 'Drafter blueprint', c: '#ff8f8f', style: 'bun', hair: '#2b2f36', node: 8, work: 'Memeriksa blueprint' },
+  { n: 'Tasya', role: 'Resepsionis', c: '#ffb3d9', style: 'long', hair: '#d8a05a', x: 2.3, y: 10.9, z: 0, fx: 0, fy: 1, st: 'Menyambut tamu di lobby' },
 ];
 agents.forEach((a, i) => { a.ph = i * 1.7;
   if (a.node != null) { a.x = NODES[a.node][0]; a.y = NODES[a.node][1]; a.z = 0; a.prev = -1; a.wait = .5 + i * .8; a.moving = false; a.spd = .95 + i * .1; a.st = 'Berkeliling kantor'; } });
@@ -445,15 +445,45 @@ function drawPawn(p) {
   ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(sx, sy, 15 * k, 6.5 * k, 0, 0, 7); ctx.fill();
   if (p.ai) { ctx.strokeStyle = `rgba(111,208,140,${.4 + .25 * Math.sin(t * 2.5)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(sx, sy, 25 * k, 10.5 * k, 0, 0, 7); ctx.stroke(); }
   if (p === sel || p === hov) { ctx.strokeStyle = p === sel ? '#f2b56b' : 'rgba(255,255,255,.6)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(sx, sy, 19 * k, 8.5 * k, 0, 0, 7); ctx.stroke(); }
-  ctx.fillStyle = shade(p.c, .7); ctx.beginPath(); ctx.ellipse(sx, by - 2 * k, 12 * k, 5 * k, 0, 0, 7); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(sx - 12 * k, by - 3 * k); ctx.quadraticCurveTo(sx - 6 * k, by - 20 * k, sx - 5 * k, by - 32 * k);
-  ctx.lineTo(sx + 5 * k, by - 32 * k); ctx.quadraticCurveTo(sx + 6 * k, by - 20 * k, sx + 12 * k, by - 3 * k); ctx.closePath(); ctx.fillStyle = p.c; ctx.fill();
-  ctx.fillStyle = shade(p.c, 1.28); ctx.beginPath(); ctx.arc(sx, by - 41 * k, 9.5 * k, 0, 7); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.arc(sx - 3 * k, by - 44 * k, 3 * k, 0, 7); ctx.fill();
-  const fx = p.fx ?? 0, fy = p.fy ?? 1;
-  if (fx + fy > -.25) { const ox = (fx - fy) * .707 * 5 * k, oy = (fx + fy) * .707 * 2.2 * k; ctx.fillStyle = '#1b1e26';
-    for (const e of [-3.2, 3.2]) { ctx.beginPath(); ctx.arc(sx + ox + e * k, by - 41 * k + oy, 1.5 * k, 0, 7); ctx.fill(); } }
-  p.hx = sx; p.hy = by - 28 * k; p.hr = 24 * k; p.ly = by - 58 * k;
+  // ---- minifigur LEGO: kaki, pinggul, torso, lengan+tangan, kepala silinder + stud, wajah, rambut/topi ----
+  const fx = p.fx ?? 0, fy = p.fy ?? 1, sit = p.z >= 10, L = sit ? 9 : 0, sw = (p.moving && !still) ? Math.sin(t * 9) * 3 : 0, front = fx + fy > -.25;
+  const SK = '#f2c230', SKD = '#d9a91c', SKL = '#f7d35a', pants = p.pants || '#2f3a57', shirt = p.shirt || p.c, hair = p.hair || '#3a2f2a';
+  const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(sx + x * k, by + y * k, w * k, h * k); };
+  const E = (cx, cy, rx, ry, c, a0 = 0, a1 = 7) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(sx + cx * k, by + cy * k, rx * k, ry * k, 0, a0, a1); ctx.fill(); };
+  const T = (pts, c) => { ctx.fillStyle = c; ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(sx + x * k, by + (y + L) * k) : ctx.moveTo(sx + x * k, by + (y + L) * k)); ctx.closePath(); ctx.fill(); };
+  if (p.style === 'long') { R(-8, -47 + L, 16, 18, hair); E(0, -29 + L, 8, 2.2, hair); }                       // rambut panjang (di belakang badan)
+  if (!sit) {                                                                                                  // kaki berdiri / berjalan
+    const lh = 14 - Math.max(0, sw), rh = 14 - Math.max(0, -sw);
+    R(-7.2, -14, 6.8, lh, pants); R(.4, -14, 6.8, rh, pants); R(-3.6, -14, 3.2, lh, shade(pants, .75)); R(3.8, -14, 3.4, rh, shade(pants, .75)); R(-.4, -14, .8, 14, '#14161d');
+  } else {                                                                                                     // duduk: paha ke depan, betis ke bawah
+    const tx = (fx - fy) * .707 * 9, ty = (fx + fy) * .707 * 4;
+    for (const lx of [-7.2, .4]) { R(lx + tx, -8 + ty, 6.8, 5, pants); R(lx + tx, -3 + ty, 6.8, 10, shade(pants, .82)); }
+  }
+  R(-7.6, -17.5 + L, 15.2, 4, shade(pants, 1.18)); R(-.4, -17.5 + L, .8, 4, 'rgba(0,0,0,.35)');                // pinggul
+  T([[-9, -34], [9, -34], [7.6, -17.5], [-7.6, -17.5]], shirt); T([[3, -34], [9, -34], [7.6, -17.5], [3, -17.5]], 'rgba(0,0,0,.18)');   // torso
+  if (p.suit) { T([[-3.2, -34], [3.2, -34], [0, -27.5]], '#f5f5f5'); T([[-1.2, -33], [1.2, -33], [1.7, -22], [0, -19.5], [-1.7, -22]], '#d1345b'); }
+  else { T([[-3, -34], [3, -34], [0, -30.5]], shade(shirt, .65)); }
+  if (p.style === 'hardhat') { R(-8.4, -27 + L, 16.8, 2, 'rgba(255,214,64,.95)'); R(-7.9, -22 + L, 15.8, 2, 'rgba(255,214,64,.95)'); }          // rompi proyek
+  const talk2 = p.think || (p.say && t < p.sayUntil), a1 = -sw * .5, a2 = sw * .5;
+  R(-13.2, -33 + L + a1, 4.2, 15, shade(shirt, .92)); E(-11.1, -17.3 + L + a1, 2.7, 2.7, SK);                                             // lengan kiri + tangan
+  if (talk2 && !still) { R(9, -46 + L, 4.2, 14, shade(shirt, .78)); E(11.1, -46.4 + L, 2.7, 2.7, SKD); }                                   // melambai saat bicara
+  else { R(9, -33 + L + a2, 4.2, 15, shade(shirt, .78)); E(11.1, -17.3 + L + a2, 2.7, 2.7, SKD); }
+  R(-2.4, -36 + L, 4.8, 2.4, SKD);                                                                                                         // leher
+  R(-6.6, -48 + L, 13.2, 12.5, SK); R(3.4, -48 + L, 3.2, 12.5, SKD); E(0, -35.5 + L, 6.6, 2.4, SK, 0, 3.15); E(0, -48 + L, 6.6, 2.4, SKL);  // kepala silinder
+  R(-2.8, -51.5 + L, 5.6, 3.5, SK); E(0, -51.5 + L, 2.8, 1.1, SKL);                                                                       // stud di atas kepala
+  if (front) { const ox = (fx - fy) * .707 * 4, oy = (fx + fy) * .707 * 1.1; ctx.fillStyle = '#1b1e26';
+    for (const e of [-2.3, 2.3]) { ctx.beginPath(); ctx.arc(sx + (ox + e) * k, by + (-43 + L + oy) * k, 1.15 * k, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = '#1b1e26'; ctx.lineWidth = Math.max(1, .9 * k); ctx.beginPath(); ctx.arc(sx + ox * k, by + (-42 + L + oy) * k, 2.7 * k, .2 * Math.PI, .8 * Math.PI); ctx.stroke(); }   // mata + senyum
+  if (p.style === 'hardhat' || p.style === 'cap') {
+    E(0, -47 + L, 7.4, 6.4, hair, Math.PI, 2 * Math.PI);
+    if (p.style === 'hardhat') { E(0, -46.8 + L, 8.6, 2.4, shade(hair, .85)); R(-.8, -53.4 + L, 1.6, 5.6, shade(hair, .8)); }
+    else if (front) E((fx - fy) * .707 * 5.5, -46.2 + L + (fx + fy) * .707 * 2.2, 5.2, 1.9, shade(hair, .7));
+  } else {
+    R(-6.9, -48.4 + L, 13.8, front ? 4.4 : 12.6, hair); E(0, -48.4 + L, 6.9, 2.5, shade(hair, 1.2)); R(-2.8, -51.9 + L, 5.6, 3.5, hair); E(0, -51.9 + L, 2.8, 1.1, shade(hair, 1.2));
+    if (p.style === 'long') { R(-7.4, -48 + L, 1.8, 10, hair); R(5.6, -48 + L, 1.8, 10, shade(hair, .8)); }
+    if (p.style === 'bun') E(0, -56 + L, 3.8, 3.6, hair);
+  }
+  p.hx = sx; p.hy = by - (30 - L / 2) * k; p.hr = 26 * k; p.ly = by - (60 - L) * k;
 }
 function drawLabel(p) {
   ctx.font = `600 ${Math.max(10, 12 * S())}px "Segoe UI", system-ui, sans-serif`;
